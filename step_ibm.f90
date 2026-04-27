@@ -1,9 +1,10 @@
-module step
+module step_ibm
     implicit none 
     
     contains
-    subroutine moment(un,us,vn,vs,wn,ws,pn,re,dt,nx,ny,nz,dx,dy,dz)
+    subroutine moment_ibm(un,us,vn,vs,wn,ws,pn,re,dt,nx,ny,nz,dx,dy,dz,mask_u,mask_v,mask_w)
         use, intrinsic :: iso_c_binding
+        use, intrinsic :: ieee_arithmetic
         implicit none
         real(C_DOUBLE),intent(inout) :: un(nx,ny+2,nz),vn(nx,ny+1,nz),wn(nx,ny+2,nz),us(nx,ny+2,nz),vs(nx,ny+1,nz),ws(nx,ny+2,nz)
         real(C_DOUBLE),intent(inout) :: pn(nx,ny,nz)
@@ -20,28 +21,40 @@ module step
         real(C_DOUBLE) :: wu_p,wu_m,ww_p,ww_m,wv_p,wv_m
 
         real(C_DOUBLE) :: dpx,dpy,dpz
-        integer :: ip,im,kp,km
+
+        integer,intent(in):: mask_u(nx,ny+2,nz)
+        integer,intent(in):: mask_v(nx,ny+1,nz)
+        integer,intent(in):: mask_w(nx,ny+2,nz)
+
+        integer :: ip,im,kp,km,jp
         ! x axis
         do i=1, nx
-            do j= 2,ny-1
+            do j= 2,ny+1
                 do k=1,nz
+
+                    if(mask_u(i,j,k) == 1) then
+                        us(i,j,k) = 0.0d0
+                        cycle  
+                    end if
+
                     ! we apply the periodic bc 
                     ip = i + 1
                     im = i - 1
                     kp = k + 1
                     km = k - 1
-
+                    jp = j-1
                     if (ip > nx) ip = 1
                     if (im < 1 ) im = nx
 
                     if (kp > nz) kp = 1
                     if (km < 1 ) km = nz
 
+
                     uu_p = 0.25d0*(un(ip,j,k)+un(i,j,k))*(un(ip,j,k)+un(i,j,k))
                     uu_m = 0.25d0*(un(i,j,k)+un(im,j,k))*(un(i,j,k)+un(im,j,k))
                     
-                    uv_p = 0.25d0*(un(i,j+1,k)+un(i,j,k))*(vn(i,j+1,k)+vn(im,j+1,k))
-                    uv_m = 0.25d0*(un(i,j,k)+un(i,j-1,k))*(vn(i,j,k)+vn(im,j,k))
+                    uv_p = 0.25d0*(un(i,j+1,k)+un(i,j,k))*(vn(i,j,k)+vn(im,j,k))
+                    uv_m = 0.25d0*(un(i,j,k)+un(i,j-1,k))*(vn(i,j-1,k)+vn(im,j-1,k))! might change
                     
                     uw_p = 0.25d0*(un(i,j,k)+un(i,j,kp))*(wn(i,j,kp)+wn(im,j,kp))
                     uw_m = 0.25d0*(un(i,j,k)+un(i,j,km))*(wn(i,j,k)+wn(im,j,k))
@@ -50,7 +63,7 @@ module step
                     diff_uy = (un(i,j-1,k)-2.0d0*un(i,j,k)+un(i,j+1,k))/dy**2
                     diff_uz = (un(i,j,km)-2.0d0*un(i,j,k)+un(i,j,kp))/dz**2
 
-                    dpx = (pn(i,j,k)-pn(im,j,k))/dx
+                    dpx = (pn(i,jp,k)-pn(im,jp,k))/dx
 
                     us(i,j,k) = un(i,j,k)+dt*(&
                                 -(uu_p-uu_m)/dx+&
@@ -58,14 +71,45 @@ module step
                                 -(uw_p-uw_m)/dz+&
                                 -dpx+&
                                 (1.0d0/re)*(diff_ux + diff_uy + diff_uz))
+                                
+                    if (.not. ieee_is_finite(us(i,j,k))) then
+                        print *, "BAD us at i,j,k = ", i,j,k
+                        print *, "mask_u = ", mask_u(i,j,k)
+
+                        print *, "un center = ", un(i,j,k)
+                        print *, "un ip/im = ", un(ip,j,k), un(im,j,k)
+                        print *, "un j+1/j-1 = ", un(i,j+1,k), un(i,j-1,k)
+                        print *, "un kp/km = ", un(i,j,kp), un(i,j,km)
+
+                        print *, "vn terms = ", vn(i,j,k), vn(im,j,k), vn(i,j-1,k), vn(im,j-1,k)
+                        print *, "wn terms = ", wn(i,j,kp), wn(im,j,kp), wn(i,j,k), wn(im,j,k)
+
+                        print *, "uu_p uu_m = ", uu_p, uu_m
+                        print *, "uv_p uv_m = ", uv_p, uv_m
+                        print *, "uw_p uw_m = ", uw_p, uw_m
+
+                        print *, "diff ux uy uz = ", diff_ux, diff_uy, diff_uz
+                        print *, "dpx = ", dpx
+                        print *, "pn values = ", pn(i,jp,k), pn(im,jp,k)
+
+                        print *, "dx dy dz dt re = ", dx,dy,dz,dt,re
+
+                        stop
+                    end if
+
                 end do 
             end do 
         end do 
         
         ! y axis
         do i = 1,nx
-            do j = 2, ny+1
+            do j = 2, ny
                 do k =1,nz
+
+                    if(mask_v(i,j,k) == 1) then
+                        vs(i,j,k) = 0.0d0
+                        cycle  
+                    end if
 
                     ip = i + 1
                     im = i - 1
@@ -79,14 +123,14 @@ module step
                     if (km < 1 ) km = nz
 
 
-                    vu_p = 0.25d0*(vn(i,j,k)+vn(ip,j,k))*(un(ip,j,k)+un(ip,j-1,k))
-                    vu_m = 0.25d0*(vn(i,j,k)+vn(im,j,k))*(un(i,j,k)+un(i,j-1,k))
+                    vu_p = 0.25d0*(vn(i,j,k)+vn(ip,j,k))*(un(ip,j,k)+un(ip,j+1,k))
+                    vu_m = 0.25d0*(vn(i,j,k)+vn(im,j,k))*(un(i,j,k)+un(i,j+1,k))
                     
                     vv_p = 0.25d0*(vn(i,j,k)+vn(i,j+1,k))*(vn(i,j,k)+vn(i,j+1,k))
                     vv_m = 0.25d0*(vn(i,j,k)+vn(i,j-1,k))*(vn(i,j,k)+vn(i,j-1,k))
                     
-                    vw_p = 0.25d0*(vn(i,j,kp)+vn(i,j,k))*(wn(i,j,kp)+wn(i,j-1,kp))
-                    vw_m = 0.25d0*(vn(i,j,km)+vn(i,j,k))*(wn(i,j,k)+wn(i,j-1,k))
+                    vw_p = 0.25d0*(vn(i,j,kp)+vn(i,j,k))*(wn(i,j,kp)+wn(i,j+1,kp))
+                    vw_m = 0.25d0*(vn(i,j,km)+vn(i,j,k))*(wn(i,j,k)+wn(i,j+1,k))
 
                     diff_vx = (vn(im,j,k)-2.0d0*vn(i,j,k)+vn(ip,j,k))/dx**2
                     diff_vy = (vn(i,j-1,k)-2.0d0*vn(i,j,k)+vn(i,j+1,k))/dy**2
@@ -100,6 +144,7 @@ module step
                                 -(vw_p-vw_m)/dz+&
                                 -dpy+&
                                 (1.0d0/re)*(diff_vx+diff_vy+diff_vz))
+        
                 end do
             end do 
         end do 
@@ -108,7 +153,12 @@ module step
         do i = 1,nx
             do j = 2,ny+1
                 do k = 1,nz
-              
+
+                    if(mask_w(i,j,k) == 1) then
+                        ws(i,j,k) = 0.0d0
+                        cycle  
+                    end if
+
                     ip = i + 1
                     im = i - 1
                     kp = k + 1
@@ -126,14 +176,15 @@ module step
                     ww_p = 0.25d0*(wn(i,j,k)+wn(i,j,kp))*(wn(i,j,k)+wn(i,j,kp))
                     ww_m = 0.25d0*(wn(i,j,k)+wn(i,j,km))*(wn(i,j,k)+wn(i,j,km))
                     
-                    wv_p = 0.25d0*(wn(i,j,k)+wn(i,j+1,k))*(vn(i,j+1,k)+vn(i,j+1,km))
-                    wv_m = 0.25d0*(wn(i,j,k)+wn(i,j-1,k))*(vn(i,j,k)+vn(i,j,km)) 
+                    wv_p = 0.25d0*(wn(i,j,k)+wn(i,j+1,k))*(vn(i,j,k)+vn(i,j,km))
+                    wv_m = 0.25d0*(wn(i,j,k)+wn(i,j-1,k))*(vn(i,j-1,k)+vn(i,j-1,km)) 
                     
                     diff_wx = (wn(im,j,k)-2.0d0*wn(i,j,k)+wn(ip,j,k))/dx**2
                     diff_wy = (wn(i,j-1,k)-2.0d0*wn(i,j,k)+wn(i,j+1,k))/dy**2
                     diff_wz = (wn(i,j,km)-2.0d0*wn(i,j,k)+wn(i,j,kp))/dz**2                     
 
-                    dpz = (pn(i,j,k)-pn(i,j,km))/dz 
+                    jp = j-1
+                    dpz = (pn(i,jp,k)-pn(i,jp,km))/dz 
                     
                     ws(i,j,k) = wn(i,j,k)+dt*(&
                                 -(wu_p-wu_m)/dx+&
@@ -141,29 +192,32 @@ module step
                                 -(ww_p-ww_m)/dz+&
                                 -dpz+&
                                 (1.0d0/re)*(diff_wx+diff_wy+diff_wz))
+                    
                 end do 
             end do 
         end do
 
 
-    end subroutine moment
+    end subroutine moment_ibm
+
     subroutine n_step (us,un,vs,vn,ws,wn,nx,ny,nz,pc,dt,dx,dy,dz)
         use, intrinsic :: iso_c_binding 
         implicit none
         real(C_DOUBLE),intent(in) :: dx,dy,dz
         integer,intent(in) :: nx,ny,nz
-        integer :: i,j,k,km,kp,ip,im
+        integer :: i,j,k,km,kp,ip,im,jp
         real(C_DOUBLE),intent(in) :: dt
         real(C_DOUBLE),intent(in) :: pc(nx,ny,nz)
         real(C_DOUBLE),intent(inout):: un(nx,ny+2,nz),vn(nx,ny+1,nz),wn(nx,ny+2,nz)
         real(C_DOUBLE),intent(in) :: us(nx,ny+2,nz),vs(nx,ny+1,nz),ws(nx,ny+2,nz)
         ! here we change the velocities to next time step
         do i = 1,nx
-            do j = 2, ny-1
+            do j = 2, ny+1
                 do k = 1,nz
                     im = i - 1
                     if (im < 1 ) im = nx
-                    un(i,j,k) = us(i,j,k)-dt*(pc(i,j,k)-pc(im,j,k))/dx
+                    jp = j-1
+                    un(i,j,k) = us(i,j,k)-dt*(pc(i,jp,k)-pc(im,jp,k))/dx
                 end do 
             end do 
         end do
@@ -176,11 +230,12 @@ module step
         end do 
 
         do i = 1,nx
-            do j = 2,ny-1
+            do j = 2,ny+1
                 do k=1 ,nz
                     km = k - 1
                     if (km < 1 ) km = nz
-                    wn(i,j,k) = ws(i,j,k)-dt*(pc(i,j,k)-pc(i,j,km))/dz
+                    jp = j-1
+                    wn(i,j,k) = ws(i,j,k)-dt*(pc(i,jp,k)-pc(i,jp,km))/dz
                 end do 
             end do
         end do 
@@ -225,13 +280,62 @@ module step
                 if (im < 1 ) im = nx
                 if (km < 1 ) km = nz
 
-                rhs(i,j,k) = ((us(i,j,k)-us(im,j,k))/dx +&
+                rhs(i,j,k) = ((us(i,j+1,k)-us(im,j+1,k))/dx +&
                             (vs(i,j+1,k)-vs(i,j,k))/dy +&
-                            (ws(i,j,k)-ws(i,j,km))/dz)&
+                            (ws(i,j+1,k)-ws(i,j+1,km))/dz)&
                             /dt 
                 end do 
             end do 
         end do 
     end subroutine rhs_c
 
-end module step
+    subroutine apply_ibm_vel(mask_u,mask_v,mask_w,un,us,vn,vs,wn,ws,nx,ny,nz)
+        use,intrinsic :: iso_c_binding
+        implicit none
+        integer,intent(in) :: nx,ny,nz
+        real(C_DOUBLE),intent(inout) :: un(nx,ny+2,nz),us(nx,ny+2,nz)
+        real(C_DOUBLE),intent(inout) :: vn(nx,ny+1,nz),vs(nx,ny+1,nz)
+        real(C_DOUBLE),intent(inout) :: wn(nx,ny+2,nz),ws(nx,ny+2,nz)
+        
+        integer,intent(in) :: mask_u(nx,ny+2,nz)
+        integer,intent(in) :: mask_v(nx,ny+1,nz)
+        integer,intent(in) :: mask_w(nx,ny+2,nz)
+
+        integer :: i,j,k
+        do i = 1, nx
+            do j = 2,ny+1
+                do k = 1,nz
+                    if(mask_u(i,j,k)== 1)then
+                        un(i,j,k) = 0.0d0
+                        us(i,j,k) = 0.0d0
+                    end if
+                end do 
+            end do 
+        end do 
+        do i = 1, nx
+            do j = 1,ny+1
+                do k = 1,nz
+                    if(mask_v(i,j,k)== 1)then
+                        vn(i,j,k) = 0.0d0
+                        vs(i,j,k) = 0.0d0
+                    end if
+                end do 
+            end do 
+        end do 
+        do i = 1, nx
+            do j = 2,ny+1
+                do k = 1,nz
+                    if(mask_w(i,j,k)== 1)then
+                        wn(i,j,k) = 0.0d0
+                        ws(i,j,k) = 0.0d0
+                    end if
+                end do 
+            end do 
+        end do 
+
+        end subroutine apply_ibm_vel
+
+
+
+end module step_ibm
+

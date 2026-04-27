@@ -10,6 +10,8 @@ add_executable(main
     th_mod.f90
     3d_fftw.f90
     data_save.f90
+    ibm_1st.f90
+    step_ibm.f90
 )
 
 set_target_properties(main PROPERTIES
@@ -19,3 +21,4 @@ set_target_properties(main PROPERTIES
 target_include_directories(main PRIVATE C:/msys64/ucrt64/include)
 target_link_directories(main PRIVATE C:/msys64/ucrt64/lib)
 target_link_libraries(main PRIVATE fftw3)
+target_compile_options(main PRIVATE -O2)

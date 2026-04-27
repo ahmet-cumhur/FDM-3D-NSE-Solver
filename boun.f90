@@ -29,7 +29,7 @@ module boundary
         implicit none
         integer,intent(in) :: nx,ny,nz
         real(C_DOUBLE),intent(inout) :: un(nx,ny+2,nz),vn(nx,ny+1,nz),wn(nx,ny+2,nz),us(nx,ny+2,nz),vs(nx,ny+1,nz),ws(nx,ny+2,nz)
-        un(:,2:ny+1,:) = 2.0d0
-        us(:,2:ny+1,:) = 2.0d0
+        un(:,2:ny+1,:) = 0.01d0
+        us(:,2:ny+1,:) = 0.01d0
     end subroutine initi_c
 end module boundary
