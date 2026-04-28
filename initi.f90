@@ -3,6 +3,9 @@ module initi
     implicit none
 
     contains
+    ! this module contains variable/array initiation
+    
+    ! here we define variables 
     subroutine init_vars(lx,ly,lz,nx,ny,nz,dx,dy,dz,re,dt,t_final,t_current)
         use, intrinsic :: iso_c_binding
         implicit none
@@ -26,12 +29,13 @@ module initi
         t_final = 1.0d0
         t_current = 0.0d0
     end subroutine init_vars
-
+    ! here we define normal variables + ibm variables 
     subroutine init_vars_ibm(lx,ly,lz,nx,ny,nz,dx,dy,dz,re,dt,t_final,t_current,n_wave_x,n_wave_z,amp_x,phase_x,amp_z,phase_z)
         use, intrinsic :: iso_c_binding
         implicit none
         
         real(C_DOUBLE),intent(out) ::lx,ly,lz,dx,dy,dz,re,dt,t_final,t_current
+        ! n_wave_,amp_,pahese_ is for getting the sin wave
         integer,intent(out) :: n_wave_x,n_wave_z 
         integer, intent(out) :: nx,ny,nz
         real(C_DOUBLE),intent(out) :: amp_x,phase_x,amp_z,phase_z
@@ -42,31 +46,31 @@ module initi
         ly = 1.0d0
         lz = 1.0d0
         
-        nx = 50
-        ny = 50
-        nz = 50
+        nx = 100
+        ny = 100
+        nz = 100
 
         dx = lx/real(nx,C_DOUBLE)
         dy = ly/real(ny,C_DOUBLE)
         dz = lz/real(nz,C_DOUBLE)
 
         re = 100.0d0
-        dt = 1e-4
-        t_final = 1.0d0
+        dt = 1e-3
+        t_final = 2.0d0
         t_current = 0.0d0
 
         print *, "before ibm variables"
         ! ibm shape
         n_wave_x = 1
         n_wave_z = 1
-        amp_x = 1.0d0*dy
-        amp_z = 1.0d0*dy
+        amp_x = 5.0d0*dy
+        amp_z = 5.0d0*dy
         phase_x = 0.0d0
         phase_z = 0.0d0
         print *, "after ibm variables"
     end subroutine init_vars_ibm
 
-
+    ! initiate the field 
     subroutine init_field(un,us,vn,vs,wn,ws,pn,pc,nx,ny,nz,x,y,z,dx,dy,dz,rhs,uc,vc,wc)
         use,intrinsic :: iso_c_binding
         implicit none
@@ -106,6 +110,8 @@ module initi
 
     end subroutine init_field
 
+    ! initiate the field w/ ibm variables
+    ! x_u/y/z, .... mask_u/y/z etc. 
     subroutine init_field_ibm(un,us,vn,vs,wn,ws,pn,pc,nx,ny,nz,x,y,z,dx,dy,dz,rhs,uc,vc,wc,mask_u,mask_v,mask_w,y_wall_u,y_wall_v,y_wall_w,&
         x_u,y_u,z_u,x_v,y_v,z_v,x_w,y_w,z_w)
         use,intrinsic :: iso_c_binding
@@ -166,7 +172,7 @@ module initi
         x_w(:) = 0.0d0
         y_w(:) = 0.0d0
         z_w(:) = 0.0d0
-
+        ! we dont use these 
         do i = 1,nx
             x(i) = real(i-1, C_DOUBLE) * dx
         end do 

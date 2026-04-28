@@ -28,13 +28,12 @@ program main
     real(C_DOUBLE),allocatable :: uc(:,:,:),vc(:,:,:),wc(:,:,:)
     character(len=256):: file_name
 
-    !ibm variables and arrays
 
     !----------------------------------------!
-    !if you want ibm then turn of these flags!                           
+    !ibm variables and arrays                !                           
     !----------------------------------------!
 
-
+    ! they are initialized at initi file
     integer,allocatable :: mask_u(:,:,:),mask_v(:,:,:),mask_w(:,:,:)
     real(C_DOUBLE),allocatable :: y_wall_u(:,:),y_wall_w(:,:),y_wall_v(:,:)
     real(C_DOUBLE),allocatable :: x_u(:),y_u(:),z_u(:)
@@ -45,16 +44,15 @@ program main
 
 
     !----------------------------------------!
-    !if you want ibm then turn of these flags!                           
+    !ibm variables and arrays                !                           
     !----------------------------------------!
+
     
     print *, "initialzing fields and variables"
     ! initialize the variables
-    !call init_vars(lx,ly,lz,nx,ny,nz,dx,dy,dz,re,dt,t_final,t_current )
     call init_vars_ibm(lx,ly,lz,nx,ny,nz,dx,dy,dz,re,dt,t_final,t_current,n_wave_x,n_wave_z,amp_x,phase_x,amp_z,phase_z)
     print *, "variables initialized"
     ! initialize the fields
-    !call init_field(un,us,vn,vs,wn,ws,pn,pc,nx,ny,nz,x,y,z,dx,dy,dz,rhs,uc,vc,wc)
     call init_field_ibm(un,us,vn,vs,wn,ws,pn,pc,nx,ny,nz,x,y,z,dx,dy,dz,rhs,uc,vc,wc,mask_u,mask_v,mask_w,y_wall_u,y_wall_v,y_wall_w,&
         x_u,y_u,z_u,x_v,y_v,z_v,x_w,y_w,z_w)
     print *, "fields initialized" 
@@ -62,17 +60,11 @@ program main
     !apply the initial condition
     call initi_c(un,us,vn,vs,wn,ws,nx,ny,nz)
     print *, "inital condition initialized"
-    !----------------------------------------!
-    !if you want ibm then turn of these flags!                           
-    !----------------------------------------!
 
     call get_masks(amp_x,amp_z,n_wave_x,n_wave_z,phase_x,phase_z,lx,lz,x_u,y_u,z_u,x_v,y_v,z_v,x_w,y_w,z_w,nx,ny,nz,dx,dy,dz,&
             y_wall_u,y_wall_v,y_wall_w,mask_u,mask_v,mask_w)
-
     call apply_ibm_vel(mask_u,mask_v,mask_w,un,us,vn,vs,wn,ws,nx,ny,nz)
-    !----------------------------------------!
-    !if you want ibm then turn of these flags!                           
-    !----------------------------------------!
+
     ! main time loop here
     print *, "main loop starting..."
     i = 0
@@ -80,6 +72,7 @@ program main
     do while(t_current<t_final)
         t_current = t_current + dt
         i = i + 1
+        ! check for problems 
         if (maxval(abs(un)) > 1.0d6 .or. &
             maxval(abs(vn)) > 1.0d6 .or. &
             maxval(abs(wn)) > 1.0d6 .or. &
@@ -90,22 +83,13 @@ program main
         end if
         !call moment(un,us,vn,vs,wn,ws,pn,re,dt,nx,ny,nz,dx,dy,dz)
         ! if we want to use ibm then use this one
-        call apply_ibm_vel(mask_u,mask_v,mask_w,un,us,vn,vs,wn,ws,nx,ny,nz)
         call apply_bc(un,us,vn,vs,wn,ws,nx,ny,nz)
-    
-
-        call moment_ibm(un,us,vn,vs,wn,ws,pn,re,dt,nx,ny,nz,dx,dy,dz,mask_u,mask_v,mask_w)
-        
-        call apply_ibm_vel(mask_u,mask_v,mask_w,un,us,vn,vs,wn,ws,nx,ny,nz)
-        
+        call moment_ibm(un,us,vn,vs,wn,ws,pn,re,dt,nx,ny,nz,dx,dy,dz,mask_u,mask_v,mask_w)        
         call apply_bc(un,us,vn,vs,wn,ws,nx,ny,nz)
+        call apply_ibm_vel(mask_u,mask_v,mask_w,un,us,vn,vs,wn,ws,nx,ny,nz)
         call rhs_c (rhs,us,vs,ws,nx,ny,nz,dx,dy,dz,dt)
-        
         call poison_fft_3d (x,y,z,nx,ny,nz,lx,ly,lz,dx,dy,dz,rhs,pc)
-
-        call n_step (us,un,vs,vn,ws,wn,nx,ny,nz,pc,dt,dx,dy,dz)
-        call apply_ibm_vel(mask_u,mask_v,mask_w,un,us,vn,vs,wn,ws,nx,ny,nz)
-        
+        call n_step (us,un,vs,vn,ws,wn,nx,ny,nz,pc,dt,dx,dy,dz)        
         call p_step(pn,pc,nx,ny,nz)
         call apply_bc(un,us,vn,vs,wn,ws,nx,ny,nz)
 

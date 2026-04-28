@@ -3,32 +3,13 @@ module apply_ibm_1st
     implicit none
     ! we apply a sinx shape here as staircase approximation 
     contains
-        ! we get the shape of the wall 
-        subroutine y_tot_sin(amp_x,n_wave_x,lx,phase_x,x,nx,amp_z,n_wave_z,lz,phase_z,z,nz,dy,y_wall)
-            use,intrinsic :: iso_c_binding
-            implicit none
-            integer,intent(in) :: n_wave_x,nx,n_wave_z,nz
-            real(C_DOUBLE),intent(in) :: amp_x,lx,phase_x,amp_z,lz,phase_z
-            real(C_DOUBLE),intent(in) :: x(nx),z(nz),dy
+        ! this is just to get a size of the wall we put the same function inside
+        ! we get the shape of the wall for masks of u,v,w we do this because u,v,w lie on different places
+        ! y_wall(i,k) = y0 +amp_x*sin(2.0d0*pi*real(n_wave_x,kind=C_DOUBLE)*x(i)/lx+phase_x)+&
+        !            amp_z*sin(2.0d0*real(n_wave_z,kind=C_DOUBLE)*pi*z(k)/lz+phase_z)
 
-            integer :: i,k
-            real(C_DOUBLE),parameter :: pi = 3.141592653589793d0
-            real(C_DOUBLE),intent(inout) :: y_wall(nx,nz) ! this might be problematic if nx and nz has diff. sizes
-            real(C_DOUBLE) :: y0 ! some padding btwn lowest value of sine wave and y-boundary  
-            
-            
-            ! and since we can have negative values we need to apply some 
-            ! padding between y(1) and the lowest value here
-            y0 = abs(amp_x) +abs(amp_z)+5*dy + 0.1d0! padding is here
-            do i = 1,nx
-                do k = 1,nz
-                    y_wall(i,k) = y0 +amp_x*sin(2.0d0*pi*real(n_wave_x,kind=C_DOUBLE)*x(i)/lx+phase_x)+&
-                    amp_z*sin(2.0d0*real(n_wave_z,kind=C_DOUBLE)*pi*z(k)/lz+phase_z)
-                end do 
-            end do
-      
-        end subroutine y_tot_sin
 
+        ! this is for filling the location of the u's on x,y,z
         subroutine get_vel_loc_u(x_u,y_u,z_u,dx,dy,dz,nx,ny,nz)
             use, intrinsic :: iso_c_binding
             implicit none
@@ -41,7 +22,7 @@ module apply_ibm_1st
             end do
 
             do j = 1, ny+2
-                y_u(j) = real(j-1.5d0,kind=C_DOUBLE)*dy
+                y_u(j) = real(j-0.5d0,kind=C_DOUBLE)*dy ! this might be problematic? 
             end do 
 
             do k = 1,nz
@@ -50,7 +31,7 @@ module apply_ibm_1st
 
         end subroutine get_vel_loc_u
 
-        ! now we need to get the locations of the velocities and pressure
+        ! this here checks if the location of u_x/y/z and fills the mask_u array according
         subroutine get_mask_u(amp_x,amp_z,n_wave_x,n_wave_z,phase_x,phase_z,lx,lz,x_u,y_u,z_u,nx,ny,nz,dx,dy,dz,y_wall_u,mask_u)
             
             use,intrinsic :: iso_c_binding
@@ -60,6 +41,8 @@ module apply_ibm_1st
             real(C_DOUBLE),intent(in) :: amp_x,lx,phase_x,amp_z,lz,phase_z
             real(C_DOUBLE),intent(in) :: dy,dx,dz
             real(C_DOUBLE),intent(inout) :: x_u(nx),y_u(ny+2),z_u(nz)
+            ! i added the ghost boundaries too so i dont need to deal
+            ! w/ their indices in the momentum loop
             integer,intent(inout) :: mask_u(nx,ny+2,nz) 
 
             integer :: i,j,k
@@ -98,6 +81,7 @@ module apply_ibm_1st
       
         end subroutine get_mask_u
 
+        ! this is for filling the location of the v's on x,y,z
         subroutine get_vel_loc_v(x_v,y_v,z_v,dx,dy,dz,nx,ny,nz)
             use, intrinsic :: iso_c_binding
             implicit none
@@ -119,7 +103,7 @@ module apply_ibm_1st
 
         end subroutine get_vel_loc_v
 
-        ! now we need to get the locations of the velocities and pressure
+        ! this here checks if the location of v_x/y/z and fills the mask_u array according
         subroutine get_mask_v(amp_x,amp_z,n_wave_x,n_wave_z,phase_x,phase_z,lx,lz,x_v,y_v,z_v,nx,ny,nz,dx,dy,dz,y_wall_v,mask_v)
             
             use,intrinsic :: iso_c_binding
@@ -129,6 +113,7 @@ module apply_ibm_1st
             real(C_DOUBLE),intent(in) :: amp_x,lx,phase_x,amp_z,lz,phase_z
             real(C_DOUBLE),intent(in) :: dy,dx,dz
             real(C_DOUBLE),intent(inout) :: x_v(nx),y_v(ny+1),z_v(nz)
+            !  same size as vn,vs
             integer,intent(inout) :: mask_v(nx,ny+1,nz) 
 
             integer :: i,j,k
@@ -166,7 +151,8 @@ module apply_ibm_1st
             end do
       
         end subroutine get_mask_v
-
+        
+        ! this is for filling the location of the w's on x,y,z
         subroutine get_vel_loc_w(x_w,y_w,z_w,dx,dy,dz,nx,ny,nz)
             use, intrinsic :: iso_c_binding
             implicit none
@@ -179,7 +165,7 @@ module apply_ibm_1st
             end do
 
             do j = 1, ny+2
-                y_w(j) = real(j-1.5d0,kind=C_DOUBLE)*dy
+                y_w(j) = real(j-0.5d0,kind=C_DOUBLE)*dy ! might be problematic? 
             end do
 
             do k = 1,nz
@@ -188,7 +174,7 @@ module apply_ibm_1st
 
         end subroutine get_vel_loc_w
 
-        ! now we need to get the locations of the velocities and pressure
+        ! this here checks if the location of u_x/y/z and fills the mask_u array according
         subroutine get_mask_w(amp_x,amp_z,n_wave_x,n_wave_z,phase_x,phase_z,lx,lz,x_w,y_w,z_w,nx,ny,nz,dx,dy,dz,y_wall_w,mask_w)
             
             use,intrinsic :: iso_c_binding
@@ -198,6 +184,8 @@ module apply_ibm_1st
             real(C_DOUBLE),intent(in) :: amp_x,lx,phase_x,amp_z,lz,phase_z
             real(C_DOUBLE),intent(in) :: dy,dx,dz
             real(C_DOUBLE),intent(inout) :: x_w(nx),y_w(ny+2),z_w(nz)
+            ! i added the ghost boundaries too so i dont need to deal
+            ! w/ their indices in the momentum loop
             integer,intent(inout) :: mask_w(nx,ny+2,nz) 
 
             integer :: i,j,k
@@ -236,7 +224,8 @@ module apply_ibm_1st
       
         end subroutine get_mask_w
 
-        ! we combine all the mask subroutines in one 
+        ! this is just a binder function so we dont need to call each of them 
+        ! and we only get the masks once since body doesnt move
         subroutine get_masks(amp_x,amp_z,n_wave_x,n_wave_z,phase_x,phase_z,lx,lz,x_u,y_u,z_u,x_v,y_v,z_v,x_w,y_w,z_w,nx,ny,nz,dx,dy,dz,&
             y_wall_u,y_wall_v,y_wall_w,mask_u,mask_v,mask_w)
             use,intrinsic:: iso_c_binding

@@ -2,6 +2,8 @@ module step_ibm
     implicit none 
     
     contains
+    ! this is the same as the old momentum part
+    ! but i wanted a new one incase of problems
     subroutine moment_ibm(un,us,vn,vs,wn,ws,pn,re,dt,nx,ny,nz,dx,dy,dz,mask_u,mask_v,mask_w)
         use, intrinsic :: iso_c_binding
         use, intrinsic :: ieee_arithmetic
@@ -21,7 +23,8 @@ module step_ibm
         real(C_DOUBLE) :: wu_p,wu_m,ww_p,ww_m,wv_p,wv_m
 
         real(C_DOUBLE) :: dpx,dpy,dpz
-
+        ! i added the ghost boundaries too so i dont need to deal
+        ! w/ their indices in the momentum loop
         integer,intent(in):: mask_u(nx,ny+2,nz)
         integer,intent(in):: mask_v(nx,ny+1,nz)
         integer,intent(in):: mask_w(nx,ny+2,nz)
@@ -31,11 +34,16 @@ module step_ibm
         do i=1, nx
             do j= 2,ny+1
                 do k=1,nz
+                    ! this is the body check
+                    ! i deactived these cheks inside moment
+                    ! since we already zero them in other function
+                    ! @ apply_ibm_vel
 
-                    if(mask_u(i,j,k) == 1) then
-                        us(i,j,k) = 0.0d0
-                        cycle  
-                    end if
+                    !if(mask_u(i,j,k) == 1) then
+                    !    us(i,j,k) = 0.0d0
+                    !    un(i,j,k) = 0.0d0
+                    !    cycle  
+                    !end if
 
                     ! we apply the periodic bc 
                     ip = i + 1
@@ -62,7 +70,7 @@ module step_ibm
                     diff_ux = (un(im,j,k)-2.0d0*un(i,j,k)+un(ip,j,k))/dx**2
                     diff_uy = (un(i,j-1,k)-2.0d0*un(i,j,k)+un(i,j+1,k))/dy**2
                     diff_uz = (un(i,j,km)-2.0d0*un(i,j,k)+un(i,j,kp))/dz**2
-
+                    ! we use jp here
                     dpx = (pn(i,jp,k)-pn(im,jp,k))/dx
 
                     us(i,j,k) = un(i,j,k)+dt*(&
@@ -71,7 +79,7 @@ module step_ibm
                                 -(uw_p-uw_m)/dz+&
                                 -dpx+&
                                 (1.0d0/re)*(diff_ux + diff_uy + diff_uz))
-                                
+
                     if (.not. ieee_is_finite(us(i,j,k))) then
                         print *, "BAD us at i,j,k = ", i,j,k
                         print *, "mask_u = ", mask_u(i,j,k)
@@ -105,11 +113,16 @@ module step_ibm
         do i = 1,nx
             do j = 2, ny
                 do k =1,nz
-
-                    if(mask_v(i,j,k) == 1) then
-                        vs(i,j,k) = 0.0d0
-                        cycle  
-                    end if
+                    ! this is the body check
+                    ! i deactived these cheks inside moment
+                    ! since we already zero them in other function
+                    ! @ apply_ibm_vel
+                    
+                    !if(mask_v(i,j,k) == 1) then
+                    !    vs(i,j,k) = 0.0d0
+                    !    vn(i,j,k) = 0.0d0
+                    !    cycle  
+                    !end if
 
                     ip = i + 1
                     im = i - 1
@@ -153,11 +166,16 @@ module step_ibm
         do i = 1,nx
             do j = 2,ny+1
                 do k = 1,nz
+                    ! this is the body check
+                    ! i deactived these cheks inside moment
+                    ! since we already zero them in other function
+                    ! @ apply_ibm_vel
 
-                    if(mask_w(i,j,k) == 1) then
-                        ws(i,j,k) = 0.0d0
-                        cycle  
-                    end if
+                    !if(mask_w(i,j,k) == 1) then
+                    !    ws(i,j,k) = 0.0d0
+                    !    wn(i,j,k) = 0.0d0
+                    !    cycle  
+                    !end if
 
                     ip = i + 1
                     im = i - 1
@@ -269,26 +287,29 @@ module step_ibm
         real(C_DOUBLE),intent(in) ::dx,dy,dz,dt 
         real(C_DOUBLE),intent(in):: us(nx,ny+2,nz),vs(nx,ny+1,nz),ws(nx,ny+2,nz)
         real(C_DOUBLE),intent(out)::rhs(nx,ny,nz)
-        integer :: im,km
+        integer :: im,km,ip,kp
         ! here we take the divergence of the velocities
         do i = 1,nx
             do j = 1,ny
                 do k = 1,nz
-
+                ip = i + 1 
+                kp = k + 1
                 im = i - 1
                 km = k - 1
+                if (ip > nx) ip = 1
+                if (kp > nz) kp = 1
                 if (im < 1 ) im = nx
                 if (km < 1 ) km = nz
 
-                rhs(i,j,k) = ((us(i,j+1,k)-us(im,j+1,k))/dx +&
+                rhs(i,j,k) = ((us(ip,j+1,k)-us(i,j+1,k))/dx +&
                             (vs(i,j+1,k)-vs(i,j,k))/dy +&
-                            (ws(i,j+1,k)-ws(i,j+1,km))/dz)&
+                            (ws(i,j+1,kp)-ws(i,j+1,k))/dz)&
                             /dt 
                 end do 
             end do 
         end do 
     end subroutine rhs_c
-
+    ! here we apply 0 velocities again
     subroutine apply_ibm_vel(mask_u,mask_v,mask_w,un,us,vn,vs,wn,ws,nx,ny,nz)
         use,intrinsic :: iso_c_binding
         implicit none

@@ -1,4 +1,5 @@
 program test
+    ! just for general tests of arrays etc. 
     use :: apply_ibm_1st
     implicit none
     
