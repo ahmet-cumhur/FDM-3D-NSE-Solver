@@ -1,3 +1,0 @@
-C:/Users/mehme/OneDrive/Desktop/thesis/nse/build/CMakeFiles/main.dir
-C:/Users/mehme/OneDrive/Desktop/thesis/nse/build/CMakeFiles/edit_cache.dir
-C:/Users/mehme/OneDrive/Desktop/thesis/nse/build/CMakeFiles/rebuild_cache.dir
