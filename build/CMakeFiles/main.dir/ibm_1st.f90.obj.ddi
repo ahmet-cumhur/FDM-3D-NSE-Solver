@@ -1,0 +1,20 @@
+{
+	"revision" : 0,
+	"rules" : 
+	[
+		{
+			"outputs" : [],
+			"primary-output" : "CMakeFiles\\\\main.dir\\\\ibm_1st.f90.obj",
+			"provides" : 
+			[
+				{
+					"compiled-module-path" : "mod/apply_ibm_1st.mod",
+					"is-interface" : true,
+					"logical-name" : "apply_ibm_1st.mod"
+				}
+			],
+			"requires" : []
+		}
+	],
+	"version" : 0
+}

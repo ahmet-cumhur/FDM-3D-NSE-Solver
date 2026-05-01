@@ -1,0 +1,20 @@
+{
+	"revision" : 0,
+	"rules" : 
+	[
+		{
+			"outputs" : [],
+			"primary-output" : "CMakeFiles\\\\main.dir\\\\data_save.f90.obj",
+			"provides" : 
+			[
+				{
+					"compiled-module-path" : "mod/data_save.mod",
+					"is-interface" : true,
+					"logical-name" : "data_save.mod"
+				}
+			],
+			"requires" : []
+		}
+	],
+	"version" : 0
+}

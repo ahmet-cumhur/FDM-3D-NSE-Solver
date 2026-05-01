@@ -1,0 +1,25 @@
+{
+	"revision" : 0,
+	"rules" : 
+	[
+		{
+			"outputs" : [],
+			"primary-output" : "CMakeFiles\\\\main.dir\\\\step_ibm.f90.obj",
+			"provides" : 
+			[
+				{
+					"compiled-module-path" : "mod/step_ibm.mod",
+					"is-interface" : true,
+					"logical-name" : "step_ibm.mod"
+				}
+			],
+			"requires" : 
+			[
+				{
+					"logical-name" : "omp_lib.mod"
+				}
+			]
+		}
+	],
+	"version" : 0
+}

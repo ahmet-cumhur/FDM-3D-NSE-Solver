@@ -1,0 +1,20 @@
+{
+	"revision" : 0,
+	"rules" : 
+	[
+		{
+			"outputs" : [],
+			"primary-output" : "CMakeFiles\\\\main.dir\\\\boun.f90.obj",
+			"provides" : 
+			[
+				{
+					"compiled-module-path" : "mod/boundary.mod",
+					"is-interface" : true,
+					"logical-name" : "boundary.mod"
+				}
+			],
+			"requires" : []
+		}
+	],
+	"version" : 0
+}

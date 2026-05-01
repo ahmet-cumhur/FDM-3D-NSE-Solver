@@ -1,0 +1,47 @@
+{
+	"modules" : 
+	{
+		"apply_ibm_1st.mod" : 
+		{
+			"bmi" : "C:/Users/mehme/OneDrive/Desktop/thesis/nse/build/mod/apply_ibm_1st.mod",
+			"is-private" : false
+		},
+		"boundary.mod" : 
+		{
+			"bmi" : "C:/Users/mehme/OneDrive/Desktop/thesis/nse/build/mod/boundary.mod",
+			"is-private" : false
+		},
+		"data_save.mod" : 
+		{
+			"bmi" : "C:/Users/mehme/OneDrive/Desktop/thesis/nse/build/mod/data_save.mod",
+			"is-private" : false
+		},
+		"fftw_3d.mod" : 
+		{
+			"bmi" : "C:/Users/mehme/OneDrive/Desktop/thesis/nse/build/mod/fftw_3d.mod",
+			"is-private" : false
+		},
+		"initi.mod" : 
+		{
+			"bmi" : "C:/Users/mehme/OneDrive/Desktop/thesis/nse/build/mod/initi.mod",
+			"is-private" : false
+		},
+		"step.mod" : 
+		{
+			"bmi" : "C:/Users/mehme/OneDrive/Desktop/thesis/nse/build/mod/step.mod",
+			"is-private" : false
+		},
+		"step_ibm.mod" : 
+		{
+			"bmi" : "C:/Users/mehme/OneDrive/Desktop/thesis/nse/build/mod/step_ibm.mod",
+			"is-private" : false
+		},
+		"thomas.mod" : 
+		{
+			"bmi" : "C:/Users/mehme/OneDrive/Desktop/thesis/nse/build/mod/thomas.mod",
+			"is-private" : false
+		}
+	},
+	"references" : {},
+	"usages" : {}
+}

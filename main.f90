@@ -84,7 +84,7 @@ program main
         !call moment(un,us,vn,vs,wn,ws,pn,re,dt,nx,ny,nz,dx,dy,dz)
         ! if we want to use ibm then use this one
         call apply_bc(un,us,vn,vs,wn,ws,nx,ny,nz)
-        call moment_ibm(un,us,vn,vs,wn,ws,pn,re,dt,nx,ny,nz,dx,dy,dz,mask_u,mask_v,mask_w)        
+        call moment_ibm_parallel(un,us,vn,vs,wn,ws,pn,re,dt,nx,ny,nz,dx,dy,dz)        
         call apply_bc(un,us,vn,vs,wn,ws,nx,ny,nz)
         call apply_ibm_vel(mask_u,mask_v,mask_w,un,us,vn,vs,wn,ws,nx,ny,nz)
         call rhs_c (rhs,us,vs,ws,nx,ny,nz,dx,dy,dz,dt)

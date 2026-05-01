@@ -18,7 +18,10 @@ set_target_properties(main PROPERTIES
     Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/mod
 )
 # please change the directories accoring to
+
 target_include_directories(main PRIVATE C:/msys64/ucrt64/include)
 target_link_directories(main PRIVATE C:/msys64/ucrt64/lib)
 target_link_libraries(main PRIVATE fftw3)
+find_package(OpenMP REQUIRED)
+target_link_libraries(main PRIVATE OpenMP::OpenMP_Fortran)
 target_compile_options(main PRIVATE -O2)

@@ -1,0 +1,25 @@
+{
+	"revision" : 0,
+	"rules" : 
+	[
+		{
+			"outputs" : [],
+			"primary-output" : "CMakeFiles\\\\main.dir\\\\3d_fftw.f90.obj",
+			"provides" : 
+			[
+				{
+					"compiled-module-path" : "mod/fftw_3d.mod",
+					"is-interface" : true,
+					"logical-name" : "fftw_3d.mod"
+				}
+			],
+			"requires" : 
+			[
+				{
+					"logical-name" : "thomas.mod"
+				}
+			]
+		}
+	],
+	"version" : 0
+}
