@@ -59,8 +59,7 @@ program main
     i = 0
     do while(g%t_current<g%t_final)
         g%t_current = g%t_current + g%dt
-        i = i + 1
-        
+        i = i + 1   
         call momentum(f, g)
 #ifdef USE_IBM
         call apply_ibm(f%us, ibm%coef_u, g)
@@ -87,7 +86,7 @@ program main
         end if
         
 
-        if (modulo(i,1) == 100)then
+        if (modulo(i,100) == 0)then
             write(file_name,'("data_",I0,".vtk")') i
             print*, "current time step: ", i, "   filename: ", file_name, "   cfl:", g%cfl*g%dt
             call center_vel(f,g)

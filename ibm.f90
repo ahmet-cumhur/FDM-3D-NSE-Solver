@@ -96,7 +96,9 @@ end subroutine init_ibm
                 do ix = 1, size(coeff,1)
 
                     x = (real(ix,C_DOUBLE) - real(dix,C_DOUBLE)*0.5d0        )*g%dx
-                    y = (real(iy,C_DOUBLE) - real(diy,C_DOUBLE)*0.5d0 + 0.5d0)*g%dy
+                    y = (real(iy,C_DOUBLE) - real(diy,C_DOUBLE)*0.5d0        )*g%dy
+                    ! y = (real(iy,C_DOUBLE) - real(diy,C_DOUBLE)*0.5d0 + 0.5d0)*g%dy
+                    ! I am not sure? this could create some inconsistence?
                     z = (real(iz,C_DOUBLE) - real(diz,C_DOUBLE)*0.5d0        )*g%dz
 
                     if (isInBody(x, y, z, ibm, g)) then
