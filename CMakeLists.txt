@@ -11,13 +11,15 @@ option(USE_IBM "Enable immersed boundary method (IBM)" OFF)
 # Sources
 # =========================
 set(SOURCES
-    main.f90
+    main_rk3.f90
     init.f90
     boundary.f90
     io.f90
     step.f90
     3d_fftw.f90
     thomas.f90
+    rk3_step.f90
+    rk3.f90
 )
 
 # Add IBM sources only if enabled

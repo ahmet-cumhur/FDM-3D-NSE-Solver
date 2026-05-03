@@ -23,6 +23,8 @@ module init
         real(C_DOUBLE) :: lx, ly, lz
         real(C_DOUBLE) :: dx, dy, dz
         real(C_DOUBLE) :: re, dt, t_final, t_current, cfl, cflmax, dtmax
+        ! rk3 
+        real(C_DOUBLE) :: dt_step
     end type grid_type
 
     ! Flow field datatype
@@ -34,6 +36,10 @@ module init
         real(C_DOUBLE), allocatable :: pn(:,:,:), pc(:,:,:)
         real(C_DOUBLE), allocatable :: rhs(:,:,:)
         real(C_DOUBLE), allocatable :: uc(:,:,:), vc(:,:,:), wc(:,:,:)
+        ! rk3
+        real(C_DOUBLE), allocatable :: u0(:,:,:), v0(:,:,:), w0(:,:,:)
+        real(C_DOUBLE), allocatable :: rhs_0_u(:,:,:),rhs_0_v(:,:,:),rhs_0_w(:,:,:) 
+        real(C_DOUBLE), allocatable :: rhs_int_u(:,:,:),rhs_int_v(:,:,:),rhs_int_w(:,:,:)
     end type field_type
 
 ! -----------------------------
@@ -48,7 +54,7 @@ subroutine init_grid(g)
     integer :: i,j,k
 
 #ifdef USE_IBM
-    g%nx = 50; g%ny = 50; g%nz = 10
+    g%nx = 100; g%ny = 100; g%nz = 100
 #else
     g%nx = 32; g%ny = 32; g%nz = 32
 #endif
@@ -90,13 +96,20 @@ subroutine init_field(f, g)
     allocate(f%rhs(1:g%nx,1:g%ny,1:g%nz))
 
     allocate(f%uc(1:g%nx,1:g%ny,1:g%nz), f%vc(1:g%nx,1:g%ny,1:g%nz), f%wc(1:g%nx,1:g%ny,1:g%nz))
-
+    !rk3
+    allocate(f%u0(0:g%nx+1,0:g%ny+1,0:g%nz+1),f%v0(0:g%nx+1,1:g%ny+1,0:g%nz+1),f%w0(0:g%nx+1,0:g%ny+1,0:g%nz+1))
+    allocate(f%rhs_0_u(0:g%nx+1,0:g%ny+1,0:g%nz+1),f%rhs_0_v(0:g%nx+1,0:g%ny+1,0:g%nz+1),f%rhs_0_w(0:g%nx+1,0:g%ny+1,0:g%nz+1))
+    allocate(f%rhs_int_u(0:g%nx+1,0:g%ny+1,0:g%nz+1),f%rhs_int_v(0:g%nx+1,0:g%ny+1,0:g%nz+1),f%rhs_int_w(0:g%nx+1,0:g%ny+1,0:g%nz+1))
     f%un = 0.0d0; f%us = 0.0d0
     f%vn = 0.0d0; f%vs = 0.0d0
     f%wn = 0.0d0; f%ws = 0.0d0
     f%pn = 0.0d0; f%pc = 0.0d0
     f%rhs = 0.0d0
     f%uc = 0.0d0; f%vc = 0.0d0; f%wc = 0.0d0
+    !rk3
+    f%u0 = 0.0d0;f%v0 = 0.0d0;f%w0 = 0.0d0
+    f%rhs_0_u = 0.0d0;f%rhs_0_v = 0.0d0;f%rhs_0_w = 0.0d0
+    f%rhs_int_u= 0.0d0;f%rhs_int_v= 0.0d0;f%rhs_int_w= 0.0d0
 
 end subroutine init_field
 
