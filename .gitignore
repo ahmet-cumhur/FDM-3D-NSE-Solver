@@ -1,0 +1,11 @@
+build/
+*.mod
+*.o
+*.exe
+*.vtk
+build_*/
+
+*.o
+*.mod
+*.exe
+
