@@ -28,6 +28,8 @@ module init
     ! Flow field datatype
     ! ------------------------
     type :: field_type
+        ! we add some body force
+        real(C_DOUBLE) :: b_x,b_y,b_z
         real(C_DOUBLE), allocatable :: un(:,:,:), us(:,:,:)
         real(C_DOUBLE), allocatable :: vn(:,:,:), vs(:,:,:)
         real(C_DOUBLE), allocatable :: wn(:,:,:), ws(:,:,:)
@@ -47,10 +49,12 @@ subroutine init_grid(g)
     type(grid_type), intent(inout) :: g
     integer :: i,j,k
 
-#ifdef USE_IBM
-    g%nx = 50; g%ny = 50; g%nz = 10
+#ifdef USE_IBM  
+    g%nx = 50; g%ny = 50; g%nz = 20
+#elif USE_IBM_G
+    g%nx = 50; g%ny = 50; g%nz = 20
 #else
-    g%nx = 32; g%ny = 32; g%nz = 32
+    g%nx = 32; g%ny = 32; g%nz = 10
 #endif
 
     g%lx = 1.0d0
@@ -65,6 +69,8 @@ subroutine init_grid(g)
 
 #ifdef USE_IBM
     g%dt = 1.0d-4
+#elif USE_IBM_G
+    g%dt = 1.0d-3
 #else
     g%dt = 1.0d-3
 #endif
@@ -97,6 +103,8 @@ subroutine init_field(f, g)
     f%pn = 0.0d0; f%pc = 0.0d0
     f%rhs = 0.0d0
     f%uc = 0.0d0; f%vc = 0.0d0; f%wc = 0.0d0
+    ! we use body forces as driving force
+    f%b_x = 1.0d0;f%b_y= 0.1d0;f%b_z= 0.0d0
 
 end subroutine init_field
 

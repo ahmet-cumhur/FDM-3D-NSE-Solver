@@ -21,7 +21,7 @@ set(SOURCES
 )
 
 # Add IBM sources only if enabled
-if(USE_IBM)
+if(USE_IBM OR USE_IBM_G)
     list(APPEND SOURCES
         ibm.f90
     )
@@ -56,7 +56,9 @@ endif()
 if(USE_IBM)
     target_compile_definitions(main PRIVATE USE_IBM)
 endif()
-
+if(USE_IBM_G)
+    target_compile_definitions(main PRIVATE USE_IBM_G)
+endif()
 
 # =========================
 # FFTW

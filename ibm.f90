@@ -27,7 +27,10 @@ module ibmm
         real(C_DOUBLE) :: amp_z, phase_z
 
         real(C_DOUBLE), allocatable :: coef_u(:,:,:), coef_v(:,:,:), coef_w(:,:,:)
-
+#ifdef USE_IBM_G
+        real(C_DOUBLE) :: lambda
+        real(C_DOUBLE), allocatable :: coef_u_lap(:,:,:), coef_v_lap(:,:,:), coef_w_lap(:,:,:)
+#endif
     end type ibm_type
 
 #define SOLID 1.0d30
@@ -48,11 +51,21 @@ subroutine init_ibm(ibm, g)
     ibm%amp_z = 5*g%dy
     ibm%phase_x = 0.0d0
     ibm%phase_z = 0.0d0
-
+#ifdef USE_IBM_G
+    ibm%lambda = 0.0d0
+#endif
     allocate(ibm%coef_u(0:g%nx+1,0:g%ny+1,0:g%nz+1))
     allocate(ibm%coef_v(0:g%nx+1,1:g%ny+1,0:g%nz+1))
     allocate(ibm%coef_w(0:g%nx+1,0:g%ny+1,0:g%nz+1))
 
+#ifdef USE_IBM_G
+    allocate(ibm%coef_u_lap(0:g%nx+1,0:g%ny+1,0:g%nz+1))
+    allocate(ibm%coef_v_lap(0:g%nx+1,1:g%ny+1,0:g%nz+1))
+    allocate(ibm%coef_w_lap(0:g%nx+1,0:g%ny+1,0:g%nz+1))
+    ibm%coef_u_lap(:,:,:) = 0.0d0
+    ibm%coef_v_lap(:,:,:) = 0.0d0
+    ibm%coef_w_lap(:,:,:) = 0.0d0
+#endif
 
 end subroutine init_ibm
 
@@ -66,11 +79,12 @@ end subroutine init_ibm
 
         real(C_DOUBLE), parameter :: pi = 3.141592653589793d0
         real(C_DOUBLE) :: y_body
-
-        y_body = ibm%amp_x * 0.5d0 * &
-                 (1.0d0 + sin(2.0d0*pi*real(ibm%n_wave_x,C_DOUBLE)*x/g%lx + ibm%phase_x)) + 2*g%dy !* &
-!                 ibm%amp_z * 0.5d0 * &
-                !(1.0d0 + sin(2.0d0*pi*real(ibm%n_wave_z,C_DOUBLE)*z/g%lz + ibm%phase_z))
+        real(C_DOUBLE) :: y0
+        y0 = 2.0d0*g%dy
+        y_body = y0+ibm%amp_x * 0.5d0 * &
+                 (1.0d0 + sin(2.0d0*pi*real(ibm%n_wave_x,C_DOUBLE)*x/g%lx + ibm%phase_x))  + &
+                 ibm%amp_z * 0.5d0 * &
+                (1.0d0 + sin(2.0d0*pi*real(ibm%n_wave_z,C_DOUBLE)*z/g%lz + ibm%phase_z))
 
         isInBody = (y < y_body)
 
@@ -110,7 +124,184 @@ end subroutine init_ibm
         end do
 
     end subroutine set_ibm_coeff
-    
+
+#ifdef USE_IBM_G
+    subroutine set_ibm_coeff_2nd(g, ibm, coeff, dix, diy, diz,coef_lap)
+        implicit none
+
+        type(grid_type), intent(in) :: g
+        type(ibm_type), intent(inout) :: ibm
+
+        real(C_DOUBLE), intent(inout) :: coeff(:,:,:)
+        real(C_DOUBLE), intent(inout) :: coef_lap(:,:,:)
+
+        integer, intent(in) :: dix, diy, diz
+        integer :: ix, iy, iz
+        real(C_DOUBLE) :: x, y, z
+        ! these are for the checking the neigbours of the given point
+        real(C_DOUBLE) :: x_ip,x_im, y_jp,y_jm, z_kp,z_km
+
+        coeff = 0.0d0
+        coef_lap = 0.0d0
+
+        do iz = 1, size(coeff,3)
+            do iy = 1, size(coeff,2)
+                do ix = 1, size(coeff,1)
+                    ! we save the neigbours of the given point
+                    
+                    
+                    x = (real(ix,C_DOUBLE) - real(dix,C_DOUBLE)*0.5d0        )*g%dx
+                    y = (real(iy,C_DOUBLE) - real(diy,C_DOUBLE)*0.5d0        )*g%dy
+                    ! y = (real(iy,C_DOUBLE) - real(diy,C_DOUBLE)*0.5d0 + 0.5d0)*g%dy
+                    ! I am not sure? this could create some inconsistence?
+                    z = (real(iz,C_DOUBLE) - real(diz,C_DOUBLE)*0.5d0        )*g%dz
+
+                    x_ip= x + g%dx
+                    x_im= x - g%dx 
+                    y_jp= y + g%dy
+                    y_jm= y - g%dy
+                    z_kp= z + g%dz 
+                    z_km= z - g%dz
+
+                    ! then we check if the given point is in body.
+                    if (isInBody(x, y, z, ibm, g)) then
+                        coeff(ix,iy,iz) = SOLID
+                        ! if it isnt in body and its neigbour is then; 
+                        ! we add a coefficient to laplacian
+                    end if
+                        ! first we go for x dir
+                    if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x_ip,y,z,ibm,g)) then
+                        call find_btw_points_x(x,x_ip,y,z,ibm,g)
+                        coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
+                    end if
+                    if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x_im,y,z,ibm,g)) then 
+                        call find_btw_points_x(x,x_im,y,z,ibm,g)
+                        coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
+                    end if
+                        ! z dir    
+                    if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x,y,z_kp,ibm,g)) then
+                        call find_btw_points_z(z,z_kp,y,x,ibm,g)
+                        coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
+                    end if
+                    if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x,y,z_km,ibm,g)) then 
+                        call find_btw_points_z(z,z_km,y,x,ibm,g)
+                        coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
+                    end if
+                        ! y dir
+                    if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x,y_jp,z,ibm,g)) then
+                        call find_btw_points_y(y,y_jp,x,z,ibm,g)
+                        coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
+                    end if
+                    if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x,y_jm,z,ibm,g)) then 
+                        call find_btw_points_y(y,y_jm,x,z,ibm,g)
+                        coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
+                    end if
+
+                end do
+            end do
+        end do
+
+    end subroutine set_ibm_coeff_2nd
+
+
+    subroutine find_btw_points_x(x,x_n,y,z,ibm,g)
+        implicit none
+        real(C_DOUBLE), intent(in)       :: x, y, z,x_n
+        type(grid_type),   intent(in)    :: g
+        type(ibm_type), intent(inout)    :: ibm
+        real(C_DOUBLE)                   :: x_fluid,x_solid,x_int,x_int_0
+        integer                          :: i,n_iteration = 60
+        real(C_DOUBLE)                   :: x_diff = 0.0d0
+
+        ! x is in fluid and x_n is in solid so we need to
+        ! find their boundary step by step
+        ! for this we will approximate the y_boundary first we will go by mid point
+        ! the distance  between points are g%dL so it should be between 0 and dL. 
+        ! we first checks if the mid point is in fluid or not
+        x_fluid = x;x_solid = x_n
+        x_int= 0.0d0; x_int_0 = 0.0d0
+        ibm%lambda = 0.0d0
+        do i = 1, n_iteration
+            ! we save the middle value here
+            x_int_0 = x_int
+            x_int = real((x_fluid+x_solid)/2.0d0,kind=C_DOUBLE)
+
+            if(isInBody(x_int,y,z,ibm,g))then
+                x_solid = x_int
+            else 
+                x_fluid = x_int
+            end if 
+
+        end do
+        ! we need to watch for the sign of the lambda
+        ! it might amplify the velocities 
+        x_diff = abs(x-x_int)   
+        ! we also need to add the 1/dx**2 to the lambda
+        ibm%lambda= real((1.0d0 / g%dx**2)*(1.0d0-(g%dx/x_diff)),kind=C_DOUBLE)
+        
+    end subroutine find_btw_points_x
+
+    ! same as x just names changed
+    subroutine find_btw_points_z(z,z_n,y,x,ibm,g)
+        implicit none
+        real(C_DOUBLE), intent(in)       :: z, y, x,z_n
+        type(grid_type),   intent(in)    :: g
+        type(ibm_type), intent(inout)    :: ibm
+        real(C_DOUBLE)                   :: z_fluid,z_solid,z_int,z_int_0
+        integer                          :: i,n_iteration = 60
+        real(C_DOUBLE)                   :: z_diff=0.0d0
+
+        z_fluid = z;z_solid = z_n
+        z_int= 0.0d0; z_int_0 = 0.0d0
+        ibm%lambda = 0.0d0
+        do i = 1, n_iteration
+            ! we save the middle value here
+            z_int_0 = z_int
+            z_int = real((z_fluid+z_solid)/2.0d0,kind=C_DOUBLE)
+
+            if(isInBody(x,y,z_int,ibm,g))then
+                z_solid = z_int
+            else 
+                z_fluid = z_int
+            end if 
+
+        end do
+        z_diff = abs(z-z_int)
+        ibm%lambda= real((1.0d0 / g%dz**2)*(1.0d0-(g%dz/z_diff)),kind=C_DOUBLE)
+        
+    end subroutine find_btw_points_z
+
+    ! same as x just names changed
+    subroutine find_btw_points_y(y,y_n,x,z,ibm,g)
+        implicit none
+        real(C_DOUBLE), intent(in)       :: y, z, x,y_n
+        type(grid_type),   intent(in)    :: g
+        type(ibm_type), intent(inout)    :: ibm
+        real(C_DOUBLE)                   :: y_fluid,y_solid,y_int,y_int_0
+        integer                          :: i,n_iteration = 60
+        real(C_DOUBLE)                   :: y_diff= 0.0d0
+
+        y_fluid = y;y_solid = y_n
+        y_int= 0.0d0; y_int_0 = 0.0d0
+        ibm%lambda = 0.0d0
+        do i = 1, n_iteration
+            y_int_0 = y_int
+            y_int = real((y_fluid+y_solid)/2.0d0,kind=C_DOUBLE)
+
+            if(isInBody(x,y_int,z,ibm,g))then
+                y_solid = y_int
+            else 
+                y_fluid = y_int
+            end if 
+
+        end do
+        y_diff = abs(y-y_int)
+        ibm%lambda= real((1.0d0 / g%dy**2)*(1.0d0-(g%dy/y_diff)),kind=C_DOUBLE)
+        
+    end subroutine find_btw_points_y
+
+#endif 
+
     subroutine apply_ibm(field, coeff, g)
         implicit none
 

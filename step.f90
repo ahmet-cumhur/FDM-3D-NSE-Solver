@@ -14,13 +14,23 @@
 module step
     use, intrinsic :: iso_c_binding
     use :: init, only: grid_type, field_type
+#ifdef USE_IBM_G
+    use :: ibmm, only: ibm_type
+#endif
     implicit none
 
 contains
-
+#ifdef USE_IBM_G
+    subroutine momentum(f, g,ibm)
+#else
     subroutine momentum(f, g)
+#endif
+        implicit none
         type(field_type), intent(inout) :: f
         type(grid_type),  intent(in)    :: g
+#ifdef USE_IBM_G
+        type(ibm_type), intent(in)      :: ibm
+#endif
 
         integer :: i,j,k,ip,im,kp,km,jp,jm
 
@@ -60,14 +70,24 @@ contains
                     diff_uz = (f%un(i,j,km)-2.0d0*f%un(i,j,k)+f%un(i,j,kp))/g%dz**2
 
                     dpx = (f%pn(i,j,k)-f%pn(im,j,k))/g%dx 
-
+#ifdef USE_IBM_G
+                    ! we apply the found coefficient as a coefficient to the eq.
+                    f%us(i,j,k) = 1.0d0/(1.0d0-ibm%coef_u_lap(i,j,k)*g%dt*(1.0d0/g%re))*(f%un(i,j,k) + g%dt*( &
+                        -(uu_p-uu_m)/g%dx &
+                        -(uv_p-uv_m)/g%dy &
+                        -(uw_p-uw_m)/g%dz &
+                        - dpx  &
+                        + f%b_x  &
+                        + (1.0d0/g%re)*(diff_ux + diff_uy + diff_uz) ))
+#else
                     f%us(i,j,k) = f%un(i,j,k) + g%dt*( &
                         -(uu_p-uu_m)/g%dx &
                         -(uv_p-uv_m)/g%dy &
                         -(uw_p-uw_m)/g%dz &
-                        - dpx + 1 &
+                        - dpx  &
+                        + f%b_x  &
                         + (1.0d0/g%re)*(diff_ux + diff_uy + diff_uz) )
-
+#endif
                 end do
             end do
         end do
@@ -98,14 +118,23 @@ contains
                     diff_vz = (f%vn(i,j,km)-2.0d0*f%vn(i,j,k)+f%vn(i,j,kp))/g%dz**2
 
                     dpy = (f%pn(i,j,k)-f%pn(i,jm,k))/g%dy
-
+#ifdef USE_IBM_G
+                    f%vs(i,j,k) = 1.0d0/(1.0d0-ibm%coef_v_lap(i,j,k)*g%dt*(1.0d0/g%re))*(f%vn(i,j,k) + g%dt*( &
+                        -(vu_p-vu_m)/g%dx &
+                        -(vv_p-vv_m)/g%dy &
+                        -(vw_p-vw_m)/g%dz &
+                        - dpy &
+                        + f%b_y &
+                        + (1.0d0/g%re)*(diff_vx + diff_vy + diff_vz) ))
+#else 
                     f%vs(i,j,k) = f%vn(i,j,k) + g%dt*( &
                         -(vu_p-vu_m)/g%dx &
                         -(vv_p-vv_m)/g%dy &
                         -(vw_p-vw_m)/g%dz &
                         - dpy &
+                        + f%b_y &
                         + (1.0d0/g%re)*(diff_vx + diff_vy + diff_vz) )
-
+#endif
                 end do
             end do
         end do
@@ -136,14 +165,23 @@ contains
                     diff_wz = (f%wn(i,j,km)-2.0d0*f%wn(i,j,k)+f%wn(i,j,kp))/g%dz**2
 
                     dpz = (f%pn(i,j,k)-f%pn(i,j,km))/g%dz
-
+#ifdef USE_IBM_G
+                    f%ws(i,j,k) = 1.0d0/(1.0d0-ibm%coef_w_lap(i,j,k)*g%dt*(1.0d0/g%re))*(f%wn(i,j,k) + g%dt*( &
+                        -(wu_p-wu_m)/g%dx &
+                        -(wv_p-wv_m)/g%dy &
+                        -(ww_p-ww_m)/g%dz &
+                        - dpz &
+                        + f%b_z &
+                        + (1.0d0/g%re)*(diff_wx + diff_wy + diff_wz) ))
+#else
                     f%ws(i,j,k) = f%wn(i,j,k) + g%dt*( &
                         -(wu_p-wu_m)/g%dx &
                         -(wv_p-wv_m)/g%dy &
                         -(ww_p-ww_m)/g%dz &
                         - dpz &
+                        + f%b_z &
                         + (1.0d0/g%re)*(diff_wx + diff_wy + diff_wz) )
-
+#endif
                 end do
             end do
         end do

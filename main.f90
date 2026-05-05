@@ -52,6 +52,12 @@ program main
     call set_ibm_coeff(g, ibm, ibm%coef_v, 0, 1, 0)
     call set_ibm_coeff(g, ibm, ibm%coef_w, 0, 0, 1)    
 #endif    
+#ifdef USE_IBM_G
+    print *," initializing IBM 2nd order..."
+    call set_ibm_coeff_2nd(g, ibm, ibm%coef_u, 1, 0, 0,ibm%coef_u_lap)
+    call set_ibm_coeff_2nd(g, ibm, ibm%coef_v, 0, 1, 0,ibm%coef_v_lap)
+    call set_ibm_coeff_2nd(g, ibm, ibm%coef_w, 0, 0, 1,ibm%coef_w_lap)
+#endif
 
     ! Time loop
     ! ------------------------
@@ -59,8 +65,12 @@ program main
     i = 0
     do while(g%t_current<g%t_final)
         g%t_current = g%t_current + g%dt
-        i = i + 1   
+        i = i + 1
+#ifdef USE_IBM_G   
+        call momentum(f, g,ibm)
+#else
         call momentum(f, g)
+#endif
 #ifdef USE_IBM
         call apply_ibm(f%us, ibm%coef_u, g)
         call apply_ibm(f%vs, ibm%coef_v, g)
