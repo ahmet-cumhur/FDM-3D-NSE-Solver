@@ -70,7 +70,7 @@ subroutine init_grid(g)
 #ifdef USE_IBM
     g%dt = 1.0d-4
 #elif USE_IBM_G
-    g%dt = 1.0d-3
+    g%dt = 1.0d-4
 #else
     g%dt = 1.0d-3
 #endif
