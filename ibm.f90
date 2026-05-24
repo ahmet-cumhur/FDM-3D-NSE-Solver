@@ -34,7 +34,7 @@ module ibmm
     end type ibm_type
 
 #define SOLID 1.0d30
-
+        real(C_DOUBLE)::solid = 1.0d30
 contains
 
 
@@ -237,7 +237,7 @@ end subroutine init_ibm
         ! it might amplify the velocities 
         x_diff = abs(x-x_int)   
         ! we also need to add the 1/dx**2 to the lambda
-        ibm%lambda= real((1.0d0 / g%dx**2)*(1.0d0-(g%dx/x_diff)),kind=C_DOUBLE)
+        ibm%lambda= real((1.0d0 / g%dx**2)*((g%dx/x_diff)-1.0d0),kind=C_DOUBLE)
         
     end subroutine find_btw_points_x
 
@@ -267,7 +267,7 @@ end subroutine init_ibm
 
         end do
         z_diff = abs(z-z_int)
-        ibm%lambda= real((1.0d0 / g%dz**2)*(1.0d0-(g%dz/z_diff)),kind=C_DOUBLE)
+        ibm%lambda= real((1.0d0 / g%dz**2)*((g%dz/z_diff)-1.0d0),kind=C_DOUBLE)
         
     end subroutine find_btw_points_z
 
@@ -296,7 +296,7 @@ end subroutine init_ibm
 
         end do
         y_diff = abs(y-y_int)
-        ibm%lambda= real((1.0d0 / g%dy**2)*(1.0d0-(g%dy/y_diff)),kind=C_DOUBLE)
+        ibm%lambda= real((1.0d0 / g%dy**2)*((g%dy/y_diff)-1.0d0),kind=C_DOUBLE)
         
     end subroutine find_btw_points_y
 
@@ -305,22 +305,22 @@ end subroutine init_ibm
     subroutine apply_ibm(field, coeff, g)
         implicit none
 
-        real(C_DOUBLE), intent(inout) :: field(:,:,:)
-        real(C_DOUBLE), intent(in)    :: coeff(:,:,:)
-        type(grid_type), intent(in) :: g
+        real(C_DOUBLE), intent(inout)   :: field(:,:,:)
+        real(C_DOUBLE), intent(in)      :: coeff(:,:,:)
+        type(grid_type), intent(in)     :: g
 
         integer :: ix, iy, iz
 
         do iz = 1, size(field,3)
-       	   do iy = 1, size(field,2)
-	      do ix = 1, size(field,1)
+       	    do iy = 1, size(field,2)
+	            do ix = 1, size(field,1)
 
-	        field(ix,iy,iz) = field(ix,iy,iz) / &
-	                          (1.0d0 + g%dt*coeff(ix,iy,iz))
+                    field(ix,iy,iz) = field(ix,iy,iz) / &
+                                    (1.0d0 + g%dt*coeff(ix,iy,iz))
 
-	      end do
-	   end do
-        end do
+	    end do
+	        end do
+                end do
 
 end subroutine apply_ibm
 

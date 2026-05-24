@@ -27,13 +27,21 @@ program main
 #elif USE_IBM_G 
     use :: ibmm
 #endif
+    ! rk3 is here
+#ifdef USE_IBM_G
+    use :: second_rk3_mk_i, only: rk3_coeff, init_rk3_arrays, calc_a_b,rk3_first_st, rk3_second_st, rk3_third_st,divU_rk3
+#else
+    use :: second_rk3_mk_i, only: rk3_coeff,rk3_first_st, rk3_second_st, rk3_third_st,divU_rk3
+#endif
 
     ! Define variables
     ! ------------------------
     integer(C_INT)               :: i        ! Index for the time loop 
     type(grid_type)              :: g        ! Grid and flow parameters (to be added)
     type(field_type)             :: f        ! Flow field
-    type(poisson_fft_workspace)  :: ws       ! FFTW arrays, plans and parameters
+    type(poisson_fft_workspace)  :: wss       ! FFTW arrays, plans and parameters
+    type(rk3_coeff)      :: rk3_c
+
 #ifdef USE_IBM
     type(ibm_type)		 :: ibm      ! IBM arrays and parameters 
 #elif USE_IBM_G 
@@ -48,7 +56,10 @@ program main
     print *, "initialising fields..."
     call init_field(f, g)
     print *, "initialising poisson solver..."
-    call init_poisson_fft_workspace(ws, g)
+    call init_poisson_fft_workspace(wss, g)
+    ! rk3 initialize
+    print *,"initialize Runge-Kutta 3 variables..."
+    call init_rk3_arrays(g,rk3_c)
 #ifdef USE_IBM
     print *, "initialising IBM..."
     call init_ibm(ibm, g)
@@ -75,37 +86,24 @@ program main
     do while(g%t_current<g%t_final)
         g%t_current = g%t_current + g%dt
         i = i + 1
-#ifdef USE_IBM_G   
-        call momentum(f, g,ibm)
-#else
-        call momentum(f, g)
+        ! rk3 steps
+#ifdef USE_IBM_G
+        call calc_a_b(g,ibm,rk3_c)
 #endif
-#ifdef USE_IBM
-        call apply_ibm(f%us, ibm%coef_u, g)
-        call apply_ibm(f%vs, ibm%coef_v, g)
-        call apply_ibm(f%ws, ibm%coef_w, g)
-#elif USE_IBM_G
-        call apply_ibm(f%us, ibm%coef_u, g)
-        call apply_ibm(f%vs, ibm%coef_v, g)
-        call apply_ibm(f%ws, ibm%coef_w, g)
-#endif
-        call apply_bc(f, g)
-        
-        call divU(f, g)
-        
-        call poisson(g, f, ws)
-        call apply_bc(f,g)
-        call corrector(f, g)
-#ifdef USE_IBM
-        call apply_ibm(f%un, ibm%coef_u, g)
-        call apply_ibm(f%vn, ibm%coef_v, g)
-        call apply_ibm(f%wn, ibm%coef_w, g)
-#elif USE_IBM_G
-        call apply_ibm(f%un, ibm%coef_u, g)
-        call apply_ibm(f%vn, ibm%coef_v, g)
-        call apply_ibm(f%wn, ibm%coef_w, g)
-#endif
-        call apply_bc(f,g)
+#ifdef USE_IBM_G
+        call rk3_first_st(f,g,rk3_c,ibm,wss)
+        call rk3_second_st(f,g,rk3_c,ibm,wss)
+        call rk3_third_st(f,g,rk3_c,ibm,wss)
+#elif USE_IBM
+        call rk3_first_st(f,g,rk3_c,ibm,wss)
+        call rk3_second_st(f,g,rk3_c,ibm,wss)
+        call rk3_third_st(f,g,rk3_c,ibm,wss)
+#else 
+        call rk3_first_st(f,g,rk3_c,wss)
+        call rk3_second_st(f,g,rk3_c,wss)
+        call rk3_third_st(f,g,rk3_c,wss)
+#endif 
+
         g%cfl = get_cfl(f,g)
         
         if (g%cflmax>0 .and. g%cfl>0) then
@@ -122,5 +120,5 @@ program main
     end do 
 
     print *, "main loop ended..."
-    call destroy_poisson_fft_workspace(ws)
+    call destroy_poisson_fft_workspace(wss)
 end program main

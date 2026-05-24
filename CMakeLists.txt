@@ -6,7 +6,7 @@ project(3D_NSE_SOLVER LANGUAGES Fortran)
 # Options
 # =========================
 option(USE_IBM "Enable immersed boundary method (IBM)" OFF)
-
+option(USE_IBM_G "Enable second-order immersed boundary method" OFF)
 # =========================
 # Sources
 # =========================
@@ -18,6 +18,8 @@ set(SOURCES
     step.f90
     3d_fftw.f90
     thomas.f90
+    rk3_mk_i.f90
+    rk3_rhs.f90
 )
 
 # Add IBM sources only if enabled

@@ -36,6 +36,10 @@ module init
         real(C_DOUBLE), allocatable :: pn(:,:,:), pc(:,:,:)
         real(C_DOUBLE), allocatable :: rhs(:,:,:)
         real(C_DOUBLE), allocatable :: uc(:,:,:), vc(:,:,:), wc(:,:,:)
+        ! rk3 rhs values
+        real(C_DOUBLE), allocatable :: mom_rhs_u(:,:,:),mom_rhs_v(:,:,:),mom_rhs_w(:,:,:)
+        real(C_DOUBLE), allocatable :: mom_rhs_u_int(:,:,:),mom_rhs_v_int(:,:,:),mom_rhs_w_int(:,:,:)
+        real(C_DOUBLE), allocatable :: mom_rhs_u0(:,:,:),mom_rhs_v0(:,:,:),mom_rhs_w0(:,:,:)
     end type field_type
 
 ! -----------------------------
@@ -96,6 +100,10 @@ subroutine init_field(f, g)
     allocate(f%rhs(1:g%nx,1:g%ny,1:g%nz))
 
     allocate(f%uc(1:g%nx,1:g%ny,1:g%nz), f%vc(1:g%nx,1:g%ny,1:g%nz), f%wc(1:g%nx,1:g%ny,1:g%nz))
+    ! rk3 stuff
+    allocate(f%mom_rhs_u(0:g%nx+1,0:g%ny+1,0:g%nz+1),f%mom_rhs_u_int(0:g%nx+1,0:g%ny+1,0:g%nz+1),f%mom_rhs_u0(0:g%nx+1,0:g%ny+1,0:g%nz+1))
+    allocate(f%mom_rhs_v(0:g%nx+1,1:g%ny+1,0:g%nz+1),f%mom_rhs_v_int(0:g%nx+1,1:g%ny+1,0:g%nz+1),f%mom_rhs_v0(0:g%nx+1,1:g%ny+1,0:g%nz+1))
+    allocate(f%mom_rhs_w(0:g%nx+1,0:g%ny+1,0:g%nz+1),f%mom_rhs_w_int(0:g%nx+1,0:g%ny+1,0:g%nz+1),f%mom_rhs_w0(0:g%nx+1,0:g%ny+1,0:g%nz+1))
 
     f%un = 0.0d0; f%us = 0.0d0
     f%vn = 0.0d0; f%vs = 0.0d0
@@ -103,8 +111,12 @@ subroutine init_field(f, g)
     f%pn = 0.0d0; f%pc = 0.0d0
     f%rhs = 0.0d0
     f%uc = 0.0d0; f%vc = 0.0d0; f%wc = 0.0d0
-    ! we use body forces as driving force
+    ! we can use body forces as driving force
     f%b_x = 1.0d0;f%b_y= 0.1d0;f%b_z= 0.0d0
+    ! rk3 stuff
+    f%mom_rhs_u = 0.0d0;f%mom_rhs_u_int = 0.0d0;f%mom_rhs_u0 = 0.0d0
+    f%mom_rhs_v = 0.0d0;f%mom_rhs_v_int = 0.0d0;f%mom_rhs_v0 = 0.0d0
+    f%mom_rhs_w = 0.0d0;f%mom_rhs_w_int = 0.0d0;f%mom_rhs_w0 = 0.0d0
 
 end subroutine init_field
 
