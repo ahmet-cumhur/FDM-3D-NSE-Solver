@@ -14,6 +14,7 @@
 
 module ibmm
     use, intrinsic :: iso_c_binding
+    use, intrinsic :: ieee_arithmetic
     use :: init, only: grid_type
     implicit none
 
@@ -235,9 +236,19 @@ end subroutine init_ibm
         end do
         ! we need to watch for the sign of the lambda
         ! it might amplify the velocities 
+        
+        ! -----------------!
+        ! x diff goes very small numbers this causes to labmda to go inf
         x_diff = abs(x-x_int)   
-        ! we also need to add the 1/dx**2 to the lambda
+        if (.not. ieee_is_finite(x_diff))then
+            print *, "Warnig! x-IBM coefficient is not a finite number"
+        end if
+        if (x_diff < 1.0d-10)then
+            print *, "x-IBM coefficient is too small, adjustment has been made."
+            x_diff = 1.0d-10
+        end if
         ibm%lambda= real((1.0d0 / g%dx**2)*((g%dx/x_diff)-1.0d0),kind=C_DOUBLE)
+        ! we also need to add the 1/dx**2 to the lambda
         
     end subroutine find_btw_points_x
 
@@ -267,7 +278,15 @@ end subroutine init_ibm
 
         end do
         z_diff = abs(z-z_int)
+        if (.not.ieee_is_finite(z_diff))then
+            print *, "Warnig! z-IBM coefficient is not a finite number"
+        end if
+        if (z_diff<1.0d-10)then
+            print *, "z-IBM coefficient is too small, adjustment has been made."
+            z_diff = 1.0d-10
+        end if
         ibm%lambda= real((1.0d0 / g%dz**2)*((g%dz/z_diff)-1.0d0),kind=C_DOUBLE)
+        
         
     end subroutine find_btw_points_z
 
@@ -296,6 +315,13 @@ end subroutine init_ibm
 
         end do
         y_diff = abs(y-y_int)
+        if (.not.ieee_is_finite(y_diff))then
+            print *, "Warnig! y-IBM coefficient is not a finite number"
+        end if
+        if (y_diff<1.0d-10)then
+            print *, "y-IBM coefficient is too small, adjustment has been made."
+            y_diff = 1.0d-10
+        end if
         ibm%lambda= real((1.0d0 / g%dy**2)*((g%dy/y_diff)-1.0d0),kind=C_DOUBLE)
         
     end subroutine find_btw_points_y

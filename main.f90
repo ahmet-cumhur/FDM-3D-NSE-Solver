@@ -57,9 +57,11 @@ program main
     call init_field(f, g)
     print *, "initialising poisson solver..."
     call init_poisson_fft_workspace(wss, g)
+#ifdef USE_IBM_G
     ! rk3 initialize
     print *,"initialize Runge-Kutta 3 variables..."
     call init_rk3_arrays(g,rk3_c)
+#endif
 #ifdef USE_IBM
     print *, "initialising IBM..."
     call init_ibm(ibm, g)
@@ -68,7 +70,7 @@ program main
     call set_ibm_coeff(g, ibm, ibm%coef_w, 0, 0, 1)    
 #endif    
 #ifdef USE_IBM_G
-    print *," initializing IBM 2nd order..."
+    print *,"initializing IBM 2nd order..."
     call init_ibm(ibm, g)
     call set_ibm_coeff(g, ibm, ibm%coef_u, 1, 0, 0)
     call set_ibm_coeff(g, ibm, ibm%coef_v, 0, 1, 0)

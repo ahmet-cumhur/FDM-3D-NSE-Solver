@@ -33,14 +33,14 @@ module second_rk3_mk_i
             allocate(rk3_c%A_rk3_v(0:g%nx+1,1:g%ny+1,0:g%nz+1),rk3_c%B_rk3_v(0:g%nx+1,1:g%ny+1,0:g%nz+1))
             allocate(rk3_c%A_rk3_w(0:g%nx+1,0:g%ny+1,0:g%nz+1),rk3_c%B_rk3_w(0:g%nx+1,0:g%ny+1,0:g%nz+1))
             
-            rk3_c%A_rk3_u = 0.0d0
-            rk3_c%B_rk3_u = 0.0d0
+            rk3_c%A_rk3_u = 1.0d0
+            rk3_c%B_rk3_u = 1.0d0
 
-            rk3_c%A_rk3_v = 0.0d0
-            rk3_c%B_rk3_v = 0.0d0
+            rk3_c%A_rk3_v = 1.0d0
+            rk3_c%B_rk3_v = 1.0d0
             
-            rk3_c%A_rk3_w = 0.0d0
-            rk3_c%B_rk3_w = 0.0d0
+            rk3_c%A_rk3_w = 1.0d0
+            rk3_c%B_rk3_w = 1.0d0
         end subroutine init_rk3_arrays
 #endif
 #ifdef USE_IBM_G
@@ -60,10 +60,9 @@ module second_rk3_mk_i
                         ! here we calculte the A and B
                         ! we need to add the Re number!!
                         ksi_u = ibm%coef_u_lap(i,j,k)*g%dt / g%re
-                        ksi_v = ibm%coef_v_lap(i,j,k)*g%dt / g%re
                         ksi_w = ibm%coef_w_lap(i,j,k)*g%dt / g%re
                         !check if exp part too small
-                        e_u = exp(ksi_u)-1.0d0;e_v = exp(ksi_v)-1.0d0;e_w = exp(ksi_w)-1.0d0
+                        e_u = exp(ksi_u)-1.0d0;e_w = exp(ksi_w)-1.0d0
                         ! get the B first ofc w/ taylor exp. if its too small
                         ! if we let ksi/ksi this causes NaN we need to simplfy
                         
@@ -73,11 +72,6 @@ module second_rk3_mk_i
                             rk3_c%B_rk3_u(i,j,k) =  1.0d0/(1.0d0+ksi_u/2.0d0+ksi_u**2/6.0d0+ksi_u**3/24.0d0)
                         end if
 
-                        if (e_v >1e-5) then
-                            rk3_c%B_rk3_v(i,j,k) =  (ksi_v)/(e_v)
-                        else
-                            rk3_c%B_rk3_v(i,j,k) =  1.0d0/(1.0d0+ksi_v/2.0d0+ksi_v**2/6.0d0+ksi_v**3/24.0d0)
-                        end if
                         if (e_w >1e-5) then
                             rk3_c%B_rk3_w(i,j,k) =  (ksi_w)/(exp(ksi_w)-1)
                         else
@@ -85,13 +79,28 @@ module second_rk3_mk_i
                         end if
                         ! now get the A
                         rk3_c%A_rk3_u(i,j,k) = ksi_u+rk3_c%B_rk3_u(i,j,k)
-                        rk3_c%A_rk3_v(i,j,k) = ksi_v+rk3_c%B_rk3_v(i,j,k)
                         rk3_c%A_rk3_w(i,j,k) = ksi_w+rk3_c%B_rk3_w(i,j,k) 
                     end do 
                 end do
             end do            
+            do k = 1,g%nz
+                do j = 2, g%ny
+                    do i = 1,g%nx
+                        ! find the v dependent parameters here
+                        ! since it has different shape than others
+                        ksi_v = ibm%coef_v_lap(i,j,k)*g%dt / g%re
+                        e_v = exp(ksi_v)-1.0d0
+                        if (e_v >1e-5) then
+                            rk3_c%B_rk3_v(i,j,k) =  (ksi_v)/(e_v)
+                        else
+                            rk3_c%B_rk3_v(i,j,k) =  1.0d0/(1.0d0+ksi_v/2.0d0+ksi_v**2/6.0d0+ksi_v**3/24.0d0)
+                        end if
+                        rk3_c%A_rk3_v(i,j,k) = ksi_v+rk3_c%B_rk3_v(i,j,k)
+                    end do 
+                end do 
+            end do 
 
-        end subroutine calc_A_B
+        end subroutine calc_a_b
 #endif
         subroutine divU_rk3(f, g,rk3_c,n_loop)
             type(field_type),   intent(inout) :: f
@@ -107,13 +116,14 @@ module second_rk3_mk_i
                         f%rhs(i,j,k) = ( &
                         (f%us(i+1,j,k)-f%us(i,j,k))/g%dx &
                         + (f%vs(i,j+1,k)-f%vs(i,j,k))/g%dy &
-                        + (f%ws(i,j,k+1)-f%ws(i,j,k))/g%dz ) / (g%dt*rk3_c%c(n_loop))
+                        + (f%ws(i,j,k+1)-f%ws(i,j,k))/g%dz ) / (g%dt)!*rk3_c%c(n_loop))
 
                     end do
                 end do
             end do
 
         end subroutine divU_rk3
+
 
 #ifdef USE_IBM
         subroutine main_loop(f,g,ibm,wss,rk3_c,n_loop)
@@ -176,25 +186,38 @@ module second_rk3_mk_i
             type(ibm_type),intent(in)                 :: ibm
 #endif
             type(poisson_fft_workspace),intent(inout) :: wss
-            integer :: i,j,k,jp
+            integer :: i,j,k
             call mom_rhs_compute(f%mom_rhs_u0,f%mom_rhs_v0,f%mom_rhs_w0,f,g)
             do k = 1, g%nz
                 do j = 1, g%ny
-                    jp= j+1 
                     do i = 1, g%nx
 #ifdef USE_IBM_G
                     f%us(i,j,k) = (rk3_c%B_rk3_u(i,j,k) * f%un(i,j,k) + g%dt*rk3_c%a(1)*f%mom_rhs_u0(i,j,k))/rk3_c%A_rk3_u(i,j,k)
-                    f%vs(i,jp,k) = (rk3_c%B_rk3_v(i,jp,k) * f%vn(i,jp,k) + g%dt*rk3_c%a(1)*f%mom_rhs_v0(i,jp,k))/rk3_c%A_rk3_v(i,jp,k)
                     f%ws(i,j,k) = (rk3_c%B_rk3_w(i,j,k) * f%wn(i,j,k) + g%dt*rk3_c%a(1)*f%mom_rhs_w0(i,j,k))/rk3_c%A_rk3_w(i,j,k)
 #else
                     f%us(i,j,k) = (f%un(i,j,k) + g%dt*rk3_c%a(1)*f%mom_rhs_u0(i,j,k))
-                    f%vs(i,jp,k) = (f%vn(i,jp,k) + g%dt*rk3_c%a(1)*f%mom_rhs_v0(i,jp,k))
                     f%ws(i,j,k) = (f%wn(i,j,k) + g%dt*rk3_c%a(1)*f%mom_rhs_w0(i,j,k))
 #endif 
                     end do 
                 end do 
             end do 
+            ! we seperate the v and u,w because of their shape difference
+            do k = 1,g%nz
+                do  j = 2,g%ny
+                    do i = 1, g%nx
+#ifdef USE_IBM_G
+                        f%vs(i,j,k) = (rk3_c%B_rk3_v(i,j,k) * f%vn(i,j,k) + g%dt*rk3_c%a(1)*f%mom_rhs_v0(i,j,k))/rk3_c%A_rk3_v(i,j,k)
+#else
+                        f%vs(i,j,k) = (f%vn(i,j,k) + g%dt*rk3_c%a(1)*f%mom_rhs_v0(i,j,k))
+#endif
+                    end do
+                end do 
+            end do 
 
+            ! ibmg
+            
+            ! else 
+            
 
 #ifdef USE_IBM_G
             call main_loop(f,g,ibm,wss,rk3_c,1)
@@ -224,34 +247,44 @@ module second_rk3_mk_i
 #endif
             type(poisson_fft_workspace),intent(inout) :: wss
             
-            integer :: i,j,k,jp
+            integer :: i,j,k
             ! dont forget to update the mom_rhs_u0,v0,w0 in the main loop after this subroutine call
             call mom_rhs_compute(f%mom_rhs_u_int,f%mom_rhs_v_int,f%mom_rhs_w_int,f,g)
             do k = 1, g%nz
                 do j = 1, g%ny
-                    jp= j+1 
                     do i = 1, g%nx
 #ifdef USE_IBM_G
                     f%us(i,j,k) = (rk3_c%B_rk3_u(i,j,k) * f%un(i,j,k) +&
                      g%dt*(rk3_c%a(2)*f%mom_rhs_u_int(i,j,k)+rk3_c%b(2)*f%mom_rhs_u0(i,j,k)))&
                     /rk3_c%A_rk3_u(i,j,k)
-                    f%vs(i,jp,k) = (rk3_c%B_rk3_v(i,jp,k) * f%vn(i,jp,k) +&
-                     g%dt*(rk3_c%a(2)*f%mom_rhs_v_int(i,jp,k)+rk3_c%b(2)*f%mom_rhs_v0(i,jp,k)))&
-                    /rk3_c%A_rk3_v(i,jp,k)
                     f%ws(i,j,k) = (rk3_c%B_rk3_w(i,j,k) * f%wn(i,j,k) +&
                     g%dt*(rk3_c%a(2)*f%mom_rhs_w_int(i,j,k)+rk3_c%b(2)*f%mom_rhs_w0(i,j,k)))&
                     /rk3_c%A_rk3_w(i,j,k)
 #else
                     f%us(i,j,k) = (f%un(i,j,k) +&
                      g%dt*(rk3_c%a(2)*f%mom_rhs_u_int(i,j,k)+rk3_c%b(2)*f%mom_rhs_u0(i,j,k)))
-                    f%vs(i,jp,k) = (f%vn(i,jp,k) +&
-                     g%dt*(rk3_c%a(2)*f%mom_rhs_v_int(i,jp,k)+rk3_c%b(2)*f%mom_rhs_v0(i,jp,k)))
                     f%ws(i,j,k) = (f%wn(i,j,k) +&
                     g%dt*(rk3_c%a(2)*f%mom_rhs_w_int(i,j,k)+rk3_c%b(2)*f%mom_rhs_w0(i,j,k)))
 #endif    
                     end do 
                 end do 
             end do 
+            ! we  do the same seperation to the v here again
+            do k = 1,g%nz
+                do j = 2,g%ny
+                    do i = 1, g%nx
+#ifdef USE_IBM_G
+                    f%vs(i,j,k) = (rk3_c%B_rk3_v(i,j,k) * f%vn(i,j,k) +&
+                     g%dt*(rk3_c%a(2)*f%mom_rhs_v_int(i,j,k)+rk3_c%b(2)*f%mom_rhs_v0(i,j,k)))&
+                    /rk3_c%A_rk3_v(i,j,k)
+#else
+                    f%vs(i,j,k) = (f%vn(i,j,k) +&
+                     g%dt*(rk3_c%a(2)*f%mom_rhs_v_int(i,j,k)+rk3_c%b(2)*f%mom_rhs_v0(i,j,k)))
+#endif
+                    end do 
+                end do 
+            end do 
+
 
 
 #ifdef USE_IBM_G
@@ -280,36 +313,46 @@ module second_rk3_mk_i
 #endif
             type(poisson_fft_workspace),intent(inout) :: wss
             
-            integer :: i,j,k,jp
+            integer :: i,j,k
             f%mom_rhs_u0 = f%mom_rhs_u_int
             f%mom_rhs_v0 = f%mom_rhs_v_int
             f%mom_rhs_w0 = f%mom_rhs_w_int
             call mom_rhs_compute(f%mom_rhs_u_int,f%mom_rhs_v_int,f%mom_rhs_w_int,f,g)
             do k = 1, g%nz
                 do j = 1, g%ny
-                    jp= j+1 
                     do i = 1, g%nx
 #ifdef USE_IBM_G
                     f%us(i,j,k) = (rk3_c%B_rk3_u(i,j,k) * f%un(i,j,k) +&
                      g%dt*(rk3_c%a(3)*f%mom_rhs_u_int(i,j,k)+rk3_c%b(3)*f%mom_rhs_u0(i,j,k)))&
                     /rk3_c%A_rk3_u(i,j,k)
-                    f%vs(i,jp,k) = (rk3_c%B_rk3_v(i,jp,k) * f%vn(i,jp,k) +&
-                     g%dt*(rk3_c%a(3)*f%mom_rhs_v_int(i,jp,k)+rk3_c%b(3)*f%mom_rhs_v0(i,jp,k)))&
-                    /rk3_c%A_rk3_v(i,jp,k)
                     f%ws(i,j,k) = (rk3_c%B_rk3_w(i,j,k) * f%wn(i,j,k) +&
                     g%dt*(rk3_c%a(3)*f%mom_rhs_w_int(i,j,k)+rk3_c%b(3)*f%mom_rhs_w0(i,j,k)))&
                     /rk3_c%A_rk3_w(i,j,k)
 #else
                     f%us(i,j,k) = (f%un(i,j,k) +&
                      g%dt*(rk3_c%a(3)*f%mom_rhs_u_int(i,j,k)+rk3_c%b(3)*f%mom_rhs_u0(i,j,k)))
-                    f%vs(i,jp,k) = (f%vn(i,jp,k) +&
-                     g%dt*(rk3_c%a(3)*f%mom_rhs_v_int(i,jp,k)+rk3_c%b(3)*f%mom_rhs_v0(i,jp,k)))
                     f%ws(i,j,k) = (f%wn(i,j,k) +&
                     g%dt*(rk3_c%a(3)*f%mom_rhs_w_int(i,j,k)+rk3_c%b(3)*f%mom_rhs_w0(i,j,k))) 
 #endif             
                     end do 
                 end do 
             end do 
+            do k = 1, g%nz
+                do j = 2, g%ny
+                    do i = 1,g%nx
+#ifdef USE_IBM_G
+                    f%vs(i,j,k) = (rk3_c%B_rk3_v(i,j,k) * f%vn(i,j,k) +&
+                     g%dt*(rk3_c%a(3)*f%mom_rhs_v_int(i,j,k)+rk3_c%b(3)*f%mom_rhs_v0(i,j,k)))&
+                    /rk3_c%A_rk3_v(i,j,k)
+#else
+                    f%vs(i,j,k) = (f%vn(i,j,k) +&
+                     g%dt*(rk3_c%a(3)*f%mom_rhs_v_int(i,j,k)+rk3_c%b(3)*f%mom_rhs_v0(i,j,k)))
+#endif
+                    end do
+                end do
+            end do 
+
+        
 #ifdef USE_IBM_G
             call main_loop(f,g,ibm,wss,rk3_c,3)
 #elif USE_IBM
