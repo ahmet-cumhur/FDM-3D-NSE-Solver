@@ -44,6 +44,7 @@ module rk3_step_func
         end subroutine init_rk3_arrays
 #endif
 #ifdef USE_IBM_G
+            ! Here we calculte the A,B coefficients for rk3
             subroutine calc_a_b(g,ibm,rk3_c)
             implicit none
             ! we calculte in each real time step(non-rk3) 
@@ -58,14 +59,13 @@ module rk3_step_func
                 do j = 1,g%ny
                     do i = 1,g%nx
                         ! here we calculte the A and B
-                        ! we need to add the Re number!!
+                        ! we need to add the re number!!
                         ksi_u = ibm%coef_u_lap(i,j,k)*g%dt / g%re
                         ksi_w = ibm%coef_w_lap(i,j,k)*g%dt / g%re
                         !check if exp part too small
                         e_u = exp(ksi_u)-1.0d0;e_w = exp(ksi_w)-1.0d0
                         ! get the B first ofc w/ taylor exp. if its too small
                         ! if we let ksi/ksi this causes NaN we need to simplfy
-                        
                         if (e_u >1e-5) then
                             rk3_c%B_rk3_u(i,j,k) =  (ksi_u)/(e_u)
                         else
@@ -102,6 +102,7 @@ module rk3_step_func
 
         end subroutine calc_a_b
 #endif
+        ! location changed
         subroutine divU_rk3(f, g,rk3_c,n_loop)
             type(field_type),   intent(inout) :: f
             type(rk3_coeff),    intent(in)    :: rk3_c
@@ -124,7 +125,8 @@ module rk3_step_func
 
         end subroutine divU_rk3
 
-
+        ! here we create a func. for each rk3 substep
+        ! w/ its own projection steps
 #ifdef USE_IBM
         subroutine main_loop(f,g,ibm,wss,rk3_c,n_loop)
 #elif USE_IBM_G
@@ -169,6 +171,8 @@ module rk3_step_func
             call apply_bc(f,g)
         end subroutine main_loop
 
+        ! first rk3 substep
+        ! rk3 scheme is from luchini, gatti ibm paper
 #ifdef USE_IBM_G
         subroutine rk3_first_st(f,g,rk3_c,ibm,wss)
 #elif USE_IBM
@@ -213,10 +217,7 @@ module rk3_step_func
                     end do
                 end do 
             end do 
-
-            ! ibmg
             
-            ! else 
             
 
 #ifdef USE_IBM_G
@@ -229,6 +230,7 @@ module rk3_step_func
             ! now the us and un we found here are gonna be used in the next rk3 time step
         end subroutine rk3_first_st
         
+        ! second rk3 substep
 #ifdef USE_IBM_G
         subroutine rk3_second_st(f,g,rk3_c,ibm,wss)
 #elif USE_IBM
@@ -295,6 +297,7 @@ module rk3_step_func
             call main_loop(f,g,wss,rk3_c,2)
 #endif
         end subroutine rk3_second_st
+        ! third rk3 substep
 #ifdef USE_IBM_G
         subroutine rk3_third_st(f,g,rk3_c,ibm,wss)
 #elif USE_IBM 
