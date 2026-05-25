@@ -18,7 +18,7 @@ set(SOURCES
     step.f90
     3d_fftw.f90
     thomas.f90
-    rk3_mk_i.f90
+    rk3_step.f90
     rk3_rhs.f90
 )
 

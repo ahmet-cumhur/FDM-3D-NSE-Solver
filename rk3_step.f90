@@ -1,4 +1,4 @@
-module second_rk3_mk_i
+module rk3_step_func
     use, intrinsic :: iso_c_binding
     use :: init, only : field_type,grid_type 
     use :: get_rhs
@@ -362,4 +362,4 @@ module second_rk3_mk_i
 #endif
         end subroutine rk3_third_st
 
-end module second_rk3_mk_i
+end module rk3_step_func

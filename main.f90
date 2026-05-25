@@ -29,9 +29,9 @@ program main
 #endif
     ! rk3 is here
 #ifdef USE_IBM_G
-    use :: second_rk3_mk_i, only: rk3_coeff, init_rk3_arrays, calc_a_b,rk3_first_st, rk3_second_st, rk3_third_st,divU_rk3
+    use :: rk3_step_func, only: rk3_coeff, init_rk3_arrays, calc_a_b,rk3_first_st, rk3_second_st, rk3_third_st,divU_rk3
 #else
-    use :: second_rk3_mk_i, only: rk3_coeff,rk3_first_st, rk3_second_st, rk3_third_st,divU_rk3
+    use :: rk3_step_func, only: rk3_coeff,rk3_first_st, rk3_second_st, rk3_third_st,divU_rk3
 #endif
 
     ! Define variables
