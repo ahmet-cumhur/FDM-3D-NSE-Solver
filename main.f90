@@ -33,6 +33,7 @@ program main
 #else
     use :: rk3_step_func, only: rk3_coeff,rk3_first_st, rk3_second_st, rk3_third_st,divU_rk3
 #endif
+    use :: richardson,    only: calc_mean_flow,save_mean_flow
 
     ! Define variables
     ! ------------------------
@@ -48,6 +49,7 @@ program main
     type(ibm_type)       :: ibm
 #endif   
     character(len=256)           :: file_name
+    character(len=256)           :: file_name_meanf
 
     ! Initialisations
     ! ------------------------
@@ -80,7 +82,6 @@ program main
     call set_ibm_coeff_2nd(g, ibm, ibm%coef_v, 0, 1, 0,ibm%coef_v_lap)
     call set_ibm_coeff_2nd(g, ibm, ibm%coef_w, 0, 0, 1,ibm%coef_w_lap)
 #endif
-
     ! Time loop
     ! ------------------------
     print *, "main loop starting..."
@@ -92,11 +93,7 @@ program main
 #ifdef USE_IBM_G
         call calc_a_b(g,ibm,rk3_c)
 #endif
-#ifdef USE_IBM_G
-        call rk3_first_st(f,g,rk3_c,ibm,wss)
-        call rk3_second_st(f,g,rk3_c,ibm,wss)
-        call rk3_third_st(f,g,rk3_c,ibm,wss)
-#elif USE_IBM
+#if defined(USE_IBM_G) || defined (USE_IBM)
         call rk3_first_st(f,g,rk3_c,ibm,wss)
         call rk3_second_st(f,g,rk3_c,ibm,wss)
         call rk3_third_st(f,g,rk3_c,ibm,wss)
@@ -105,22 +102,18 @@ program main
         call rk3_second_st(f,g,rk3_c,wss)
         call rk3_third_st(f,g,rk3_c,wss)
 #endif 
-
-        g%cfl = get_cfl(f,g)
-        
-        if (g%cflmax>0 .and. g%cfl>0) then
-        	g%dt = min(g%cflmax/g%cfl,g%dtmax)
-        end if
-        
-
+    
+        g%dt = g%dtmax
+     
         if (modulo(i,100) == 0)then
-            write(file_name,'("data_",I0,".vtk")') i
-            print*, "current time step: ", i, "   filename: ", file_name, "   cfl:", g%cfl*g%dt
-            call center_vel(f,g)
-            call data_output(f,g,file_name)
+            print*,"time step is at: ",i
         end if 
+        
     end do 
-
+    ! and we add a mean flow calculation at the end...
+    write(file_name_meanf,'("mf_data.txt")') 
+    call save_mean_flow(f,g,file_name_meanf)
+    !------------------------------------------------
     print *, "main loop ended..."
     call destroy_poisson_fft_workspace(wss)
 end program main

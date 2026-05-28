@@ -30,6 +30,8 @@ module init
     type :: field_type
         ! we add some body force
         real(C_DOUBLE) :: b_x,b_y,b_z
+        ! mean flow 
+        real(C_DOUBLE) :: q_x,q_y,q_z
         real(C_DOUBLE), allocatable :: un(:,:,:), us(:,:,:)
         real(C_DOUBLE), allocatable :: vn(:,:,:), vs(:,:,:)
         real(C_DOUBLE), allocatable :: wn(:,:,:), ws(:,:,:)
@@ -54,9 +56,9 @@ subroutine init_grid(g)
     integer :: i,j,k
 
 #ifdef USE_IBM  
-    g%nx = 50; g%ny = 50; g%nz = 20
+    g%nx = 50; g%ny = 50; g%nz = 20;
 #elif USE_IBM_G
-    g%nx = 50; g%ny = 50; g%nz = 20
+    g%nx = 50; g%ny = 50; g%nz = 20;
 #else
     g%nx = 32; g%ny = 32; g%nz = 10
 #endif
@@ -81,7 +83,7 @@ subroutine init_grid(g)
     g%cflmax = 0.1d0
     g%dtmax = 1.0d-3
 
-    g%t_final = g%dt*10000
+    g%t_final = 1.0;
     g%t_current = 0.0d0
 
 end subroutine init_grid
@@ -112,11 +114,13 @@ subroutine init_field(f, g)
     f%rhs = 0.0d0
     f%uc = 0.0d0; f%vc = 0.0d0; f%wc = 0.0d0
     ! we can use body forces as driving force
-    f%b_x = 1.0d0;f%b_y= 0.1d0;f%b_z= 0.0d0
+    f%b_x = 1.0d0;f%b_y= 0.0d0;f%b_z= 0.0d0
     ! rk3 stuff
     f%mom_rhs_u = 0.0d0;f%mom_rhs_u_int = 0.0d0;f%mom_rhs_u0 = 0.0d0
     f%mom_rhs_v = 0.0d0;f%mom_rhs_v_int = 0.0d0;f%mom_rhs_v0 = 0.0d0
     f%mom_rhs_w = 0.0d0;f%mom_rhs_w_int = 0.0d0;f%mom_rhs_w0 = 0.0d0
+    ! mean flow stuff
+    f%q_x = 0.0d0;f%q_y = 0.0d0;f%q_z = 0.0d0
 
 end subroutine init_field
 

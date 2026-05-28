@@ -57,9 +57,9 @@ module get_rhs
                         -(uu_p-uu_m)/g%dx &
                         -(uv_p-uv_m)/g%dy &
                         -(uw_p-uw_m)/g%dz &
-                        - dpx + 1 &
-                        + (1.0d0/g%re)*(diff_ux + diff_uy + diff_uz) 
-
+                        - dpx &
+                        + (1.0d0/g%re)*(diff_ux + diff_uy + diff_uz) &
+                        + f%b_x
                 end do
             end do
         end do
@@ -96,8 +96,8 @@ module get_rhs
                         -(vv_p-vv_m)/g%dy &
                         -(vw_p-vw_m)/g%dz &
                         - dpy &
-                        + (1.0d0/g%re)*(diff_vx + diff_vy + diff_vz) 
-
+                        + (1.0d0/g%re)*(diff_vx + diff_vy + diff_vz) & 
+                        + f%b_y
                 end do
             end do
         end do
@@ -134,7 +134,8 @@ module get_rhs
                         -(wv_p-wv_m)/g%dy &
                         -(ww_p-ww_m)/g%dz &
                         - dpz &
-                        + (1.0d0/g%re)*(diff_wx + diff_wy + diff_wz) 
+                        + (1.0d0/g%re)*(diff_wx + diff_wy + diff_wz) &
+                        + f%b_z 
 
                 end do
             end do

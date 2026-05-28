@@ -48,8 +48,8 @@ subroutine init_ibm(ibm, g)
 
     ibm%n_wave_x = 1
     ibm%n_wave_z = 1
-    ibm%amp_x = 5*g%dy
-    ibm%amp_z = 5*g%dy
+    ibm%amp_x = 0.15d0
+    ibm%amp_z = 0.10d0
     ibm%phase_x = 0.0d0
     ibm%phase_z = 0.0d0
 #ifdef USE_IBM_G
@@ -81,7 +81,7 @@ end subroutine init_ibm
         real(C_DOUBLE), parameter :: pi = 3.141592653589793d0
         real(C_DOUBLE) :: y_body
         real(C_DOUBLE) :: y0
-        y0 = 2.0d0*g%dy
+        y0 = 0.04d0
         y_body = y0+ibm%amp_x * 0.5d0 * &
                  (1.0d0 + sin(2.0d0*pi*real(ibm%n_wave_x,C_DOUBLE)*x/g%lx + ibm%phase_x))  + &
                  ibm%amp_z * 0.5d0 * &
@@ -243,9 +243,9 @@ end subroutine init_ibm
         if (.not. ieee_is_finite(x_diff))then
             print *, "Warnig! x-IBM coefficient is not a finite number"
         end if
-        if (x_diff < 1.0d-10)then
+        if (x_diff < 0.01d0*g%dx)then
             print *, "x-IBM coefficient is too small, adjustment has been made."
-            x_diff = 1.0d-10
+            x_diff = 0.01d0*g%dx
         end if
         ibm%lambda= real((1.0d0 / g%dx**2)*((g%dx/x_diff)-1.0d0),kind=C_DOUBLE)
         ! we also need to add the 1/dx**2 to the lambda
@@ -281,9 +281,9 @@ end subroutine init_ibm
         if (.not.ieee_is_finite(z_diff))then
             print *, "Warnig! z-IBM coefficient is not a finite number"
         end if
-        if (z_diff<1.0d-10)then
+        if (z_diff<0.01d0*g%dz)then
             print *, "z-IBM coefficient is too small, adjustment has been made."
-            z_diff = 1.0d-10
+            z_diff = 0.01d0*g%dz
         end if
         ibm%lambda= real((1.0d0 / g%dz**2)*((g%dz/z_diff)-1.0d0),kind=C_DOUBLE)
         
@@ -318,9 +318,9 @@ end subroutine init_ibm
         if (.not.ieee_is_finite(y_diff))then
             print *, "Warnig! y-IBM coefficient is not a finite number"
         end if
-        if (y_diff<1.0d-10)then
+        if (y_diff<0.01d0*g%dy)then
             print *, "y-IBM coefficient is too small, adjustment has been made."
-            y_diff = 1.0d-10
+            y_diff = 0.01d0*g%dy
         end if
         ibm%lambda= real((1.0d0 / g%dy**2)*((g%dy/y_diff)-1.0d0),kind=C_DOUBLE)
         

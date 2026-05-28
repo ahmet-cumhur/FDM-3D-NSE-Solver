@@ -20,6 +20,7 @@ set(SOURCES
     thomas.f90
     rk3_step.f90
     rk3_rhs.f90
+    richardson.f90
 )
 
 # Add IBM sources only if enabled
@@ -41,7 +42,7 @@ set_target_properties(main PROPERTIES
 # =========================
 # Compiler flags
 # =========================
-target_compile_options(main PRIVATE -O2)
+target_compile_options(main PRIVATE -O3 -march=native)
 
 # Enable preprocessing depending on compiler
 if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
