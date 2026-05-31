@@ -46,7 +46,7 @@ target_compile_options(main PRIVATE -O3 -march=native)
 
 # Enable preprocessing depending on compiler
 if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(main PRIVATE -cpp)
+    target_compile_options(main PRIVATE -cpp -ffree-line-length-none)
 elseif (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
     target_compile_options(main PRIVATE -fpp)
 elseif (CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC")
