@@ -67,20 +67,28 @@ program main
 #ifdef USE_IBM
     print *, "initialising IBM..."
     call init_ibm(ibm, g)
-    call set_ibm_coeff(g, ibm, ibm%coef_u, 1, 0, 0)
-    call set_ibm_coeff(g, ibm, ibm%coef_v, 0, 1, 0)
-    call set_ibm_coeff(g, ibm, ibm%coef_w, 0, 0, 1)    
+    call set_ibm_coeff(g, ibm, ibm%coef_u, 1, 0, 0,0,0,0)
+    call set_ibm_coeff(g, ibm, ibm%coef_v, 0, 1, 0,0,1,0)
+    call set_ibm_coeff(g, ibm, ibm%coef_w, 0, 0, 1,0,0,0)    
 #endif    
 #ifdef USE_IBM_G
     print *,"initializing IBM 2nd order..."
     call init_ibm(ibm, g)
-    call set_ibm_coeff(g, ibm, ibm%coef_u, 1, 0, 0)
-    call set_ibm_coeff(g, ibm, ibm%coef_v, 0, 1, 0)
-    call set_ibm_coeff(g, ibm, ibm%coef_w, 0, 0, 1)    
+    call set_ibm_coeff(g, ibm, ibm%coef_u, 1, 0, 0,0,0,0)
+    call set_ibm_coeff(g, ibm, ibm%coef_v, 0, 1, 0,0,1,0)
+    call set_ibm_coeff(g, ibm, ibm%coef_w, 0, 0, 1,0,0,0) 
 
-    call set_ibm_coeff_2nd(g, ibm, ibm%coef_u, 1, 0, 0,ibm%coef_u_lap)
-    call set_ibm_coeff_2nd(g, ibm, ibm%coef_v, 0, 1, 0,ibm%coef_v_lap)
-    call set_ibm_coeff_2nd(g, ibm, ibm%coef_w, 0, 0, 1,ibm%coef_w_lap)
+    call set_ibm_coeff_2nd(g, ibm, ibm%coef_u, 1, 0, 0,ibm%coef_u_lap,0,0,0)
+    call set_ibm_coeff_2nd(g, ibm, ibm%coef_v, 0, 1, 0,ibm%coef_v_lap,0,1,0)
+    call set_ibm_coeff_2nd(g, ibm, ibm%coef_w, 0, 0, 1,ibm%coef_w_lap,0,0,0)
+
+    print *, "max coef_u_lap = ", maxval(ibm%coef_u_lap)
+    print *, "max coef_v_lap = ", maxval(ibm%coef_v_lap)
+    print *, "max coef_w_lap = ", maxval(ibm%coef_w_lap)
+
+    print *, "sum coef_u_lap = ", sum(ibm%coef_u_lap)
+    print *, "sum coef_v_lap = ", sum(ibm%coef_v_lap)
+    print *, "sum coef_w_lap = ", sum(ibm%coef_w_lap)
 #endif
     ! Time loop
     ! ------------------------

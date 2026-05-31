@@ -6,7 +6,7 @@ import shutil
 # spatial 
 # enter the resolutions
 # resolutions must be entered like : ----- coarse to finer -----
-resolutions= np.array([8,16,32])
+resolutions= np.array([16,32,64])
 # change dt:
 dt = 1e-3
 dt_max = 1e-3
@@ -41,9 +41,9 @@ def run_cases(init_file_path:str,resolutions:np.array,dt:float,dt_max:float,t_fi
         init_variables = init_variables.replace("g%ny = 50;",f"g%ny = {resolutions[i]};")
         init_variables = init_variables.replace("g%nz = 20;",f"g%nz = {resolutions[i]};")
         
-        init_variables = init_variables.replace(f"g%dt = 1e-4",f"g%dt = {dt};")
-        init_variables = init_variables.replace(f"g%dt_max = 1e-3",f"g%dtmax = {dt_max};")
-        init_variables = init_variables.replace(f"g%t_final = g%dt*10000",f"g%t_final = {t_final};")
+        init_variables = init_variables.replace(f"g%dt = 1.0d-4",f"g%dt = {dt};")
+        init_variables = init_variables.replace(f"g%dt_max = 1.0d-3",f"g%dtmax = {dt_max};")
+        init_variables = init_variables.replace(f"g%t_final = 1.0",f"g%t_final = {t_final};")
         # we add seek cause pyth adds values to the end now it goes up and replaces them
         # write the new init vars. inside
         init_file.seek(0)          
