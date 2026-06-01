@@ -110,11 +110,9 @@ end subroutine init_ibm
             do iy = lbound(coeff,2), ubound(coeff,2)
                 do ix = lbound(coeff,1), ubound(coeff,1)
 
-                    x = (real(ix,C_DOUBLE) -real(dix,C_DOUBLE)*0.5d0        )*g%dx
-                    y = (real(iy,C_DOUBLE) -real(diy,C_DOUBLE)*0.5d0        )*g%dy
-                    ! y = (real(iy,C_DOUBLE) - real(diy,C_DOUBLE)*0.5d0 + 0.5d0)*g%dy
-                    ! I am not sure? this could create some inconsistence?
-                    z = (real(iz,C_DOUBLE) -real(diz,C_DOUBLE)*0.5d0        )*g%dz
+                    x = (real(ix,C_DOUBLE) -0.5d0-real(dix,C_DOUBLE)*0.5d0        )*g%dx
+                    y = (real(iy,C_DOUBLE) -0.5d0-real(diy,C_DOUBLE)*0.5d0        )*g%dy
+                    z = (real(iz,C_DOUBLE) -0.5d0-real(diz,C_DOUBLE)*0.5d0        )*g%dz
 
                     if (isInBody(x, y, z, ibm, g)) then
                         coeff(ix,iy,iz) = SOLID
@@ -151,11 +149,9 @@ end subroutine init_ibm
                     ! we save the neigbours of the given point
                     
                     
-                    x = (real(ix,C_DOUBLE) -real(dix,C_DOUBLE)*0.5d0        )*g%dx
-                    y = (real(iy,C_DOUBLE) -real(diy,C_DOUBLE)*0.5d0        )*g%dy
-                    ! y = (real(iy,C_DOUBLE) real(diy,C_DOUBLE)*0.5d0 + 0.5d0)*g%dy
-                    ! I am not sure? this could create some inconsistence?
-                    z = (real(iz,C_DOUBLE) -real(diz,C_DOUBLE)*0.5d0        )*g%dz
+                    x = (real(ix,C_DOUBLE) -0.5d0-real(dix,C_DOUBLE)*0.5d0        )*g%dx
+                    y = (real(iy,C_DOUBLE) -0.5d0-real(diy,C_DOUBLE)*0.5d0        )*g%dy
+                    z = (real(iz,C_DOUBLE) -0.5d0-real(diz,C_DOUBLE)*0.5d0        )*g%dz
 
                     x_ip= x + g%dx
                     x_im= x - g%dx 
@@ -173,28 +169,53 @@ end subroutine init_ibm
                         ! first we go for x dir
                     if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x_ip,y,z,ibm,g)) then
                         call find_btw_points_x(x,x_ip,y,z,ibm,g,coeff,ix,iy,iz,i0,j0,k0)
+                        ! I added these checks if the point we are are at is solid then we skip directly
+                        if (coeff(ix,iy,iz) == SOLID)then
+                            coef_lap(ix,iy,iz) = 0.0d0
+                            cycle
+                        end if 
                         coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
                     end if
                     if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x_im,y,z,ibm,g)) then 
                         call find_btw_points_x(x,x_im,y,z,ibm,g,coeff,ix,iy,iz,i0,j0,k0)
+                        if (coeff(ix,iy,iz) == SOLID)then
+                            coef_lap(ix,iy,iz) = 0.0d0
+                            cycle
+                        end if
                         coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
                     end if
                         ! z dir    
                     if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x,y,z_kp,ibm,g)) then
                         call find_btw_points_z(z,z_kp,y,x,ibm,g,coeff,ix,iy,iz,i0,j0,k0)
+                        if (coeff(ix,iy,iz) == SOLID)then
+                            coef_lap(ix,iy,iz) = 0.0d0
+                            cycle
+                        end if
                         coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
                     end if
                     if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x,y,z_km,ibm,g)) then 
                         call find_btw_points_z(z,z_km,y,x,ibm,g,coeff,ix,iy,iz,i0,j0,k0)
+                        if (coeff(ix,iy,iz) == SOLID)then
+                            coef_lap(ix,iy,iz) = 0.0d0
+                            cycle
+                        end if
                         coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
                     end if
                         ! y dir
                     if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x,y_jp,z,ibm,g)) then
                         call find_btw_points_y(y,y_jp,x,z,ibm,g,coeff,ix,iy,iz,i0,j0,k0)
+                        if (coeff(ix,iy,iz) == SOLID)then
+                            coef_lap(ix,iy,iz) = 0.0d0
+                            cycle
+                        end if
                         coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
                     end if
                     if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x,y_jm,z,ibm,g)) then 
                         call find_btw_points_y(y,y_jm,x,z,ibm,g,coeff,ix,iy,iz,i0,j0,k0)
+                        if (coeff(ix,iy,iz) == SOLID)then
+                            coef_lap(ix,iy,iz) = 0.0d0
+                            cycle
+                        end if
                         coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
                     end if
 
@@ -211,10 +232,11 @@ end subroutine init_ibm
         type(grid_type),   intent(in)    :: g
         type(ibm_type), intent(inout)    :: ibm
         real(C_DOUBLE)                   :: x_fluid,x_solid,x_int,x_int_0
-        integer                          :: i,n_iteration = 20
+        integer                          :: i,n_iteration = 50
         real(C_DOUBLE)                   :: x_diff = 0.0d0
         integer,intent(in)               :: ix,iy,iz,i0,j0,k0
         real(C_DOUBLE), intent(inout)    :: coeff(i0:,j0:,k0:)
+        real(C_DOUBLE)                   :: eps
         
 
         ! x is in fluid and x_n is in solid so we need to
@@ -246,11 +268,16 @@ end subroutine init_ibm
         if (.not. ieee_is_finite(x_diff))then
             print *, "Warnig! x-IBM coefficient is not a finite number"
         end if
-        if (x_diff < 1.0d-5*g%dx)then
-            print *, "x-IBM coefficient is too small, adjustment has been made."
+        ! I also added another check if the the distance between velocity point
+        ! and boundary is too close it directly marks there as solid. This might be problem?
+        ! otherwise either i have too big lambda or infinite lambda
+        eps = 1.0d-10*g%dx
+        if (x_diff<eps)then
+            ibm%lambda= 0.0d0
             coeff(ix,iy,iz) = SOLID
-        end if
+        else
         ibm%lambda= real((1.0d0 / g%dx**2)*((g%dx/x_diff)-1.0d0),kind=C_DOUBLE)
+        end if 
         ! we also need to add the 1/dx**2 to the lambda
     end subroutine find_btw_points_x
 
@@ -261,10 +288,12 @@ end subroutine init_ibm
         type(grid_type),   intent(in)    :: g
         type(ibm_type), intent(inout)    :: ibm
         real(C_DOUBLE)                   :: z_fluid,z_solid,z_int,z_int_0
-        integer                          :: i,n_iteration = 20
+        integer                          :: i,n_iteration = 50
         real(C_DOUBLE)                   :: z_diff=0.0d0
         integer,intent(in)               :: ix,iy,iz,i0,j0,k0
         real(C_DOUBLE), intent(inout)    :: coeff(i0:,j0:,k0:)
+        real(C_DOUBLE)                   :: eps
+
         z_fluid = z;z_solid = z_n
         z_int= 0.0d0; z_int_0 = 0.0d0
         ibm%lambda = 0.0d0
@@ -284,12 +313,13 @@ end subroutine init_ibm
         if (.not.ieee_is_finite(z_diff))then
             print *, "Warnig! z-IBM coefficient is not a finite number"
         end if
-        if (z_diff<1.0d-5*g%dz)then
-            print *, "z-IBM coefficient is too small, adjustment has been made."
-            coeff(ix,iy,iz) = SOLID
-        end if
+        eps = 1.0d-10*g%dz
+        if (z_diff<eps)then
+            ibm%lambda= 0.0d0
+            coeff(ix,iy,iz) = SOLID 
+        else
         ibm%lambda= real((1.0d0 / g%dz**2)*((g%dz/z_diff)-1.0d0),kind=C_DOUBLE)
-        
+        end if
     end subroutine find_btw_points_z
 
     ! same as x just names changed
@@ -299,10 +329,12 @@ end subroutine init_ibm
         type(grid_type),   intent(in)    :: g
         type(ibm_type), intent(inout)    :: ibm
         real(C_DOUBLE)                   :: y_fluid,y_solid,y_int,y_int_0
-        integer                          :: i,n_iteration = 20
+        integer                          :: i,n_iteration = 50
         real(C_DOUBLE)                   :: y_diff= 0.0d0
         integer,intent(in)               :: ix,iy,iz,i0,j0,k0
         real(C_DOUBLE), intent(inout)    :: coeff(i0:,j0:,k0:)
+        real(C_DOUBLE)                   :: eps
+
         y_fluid = y;y_solid = y_n
         y_int= 0.0d0; y_int_0 = 0.0d0
         ibm%lambda = 0.0d0
@@ -321,11 +353,13 @@ end subroutine init_ibm
         if (.not.ieee_is_finite(y_diff))then
             print *, "Warnig! y-IBM coefficient is not a finite number"
         end if
-        if (y_diff<1.0d-5*g%dy)then
-            print *, "y-IBM coefficient is too small, adjustment has been made."
+        eps = 1.0d-10*g%dy
+        if (y_diff<eps)then
+            ibm%lambda= 0.0d0
             coeff(ix,iy,iz) = SOLID
-        end if
+        else 
         ibm%lambda= real((1.0d0 / g%dy**2)*((g%dy/y_diff)-1.0d0),kind=C_DOUBLE)
+        end if
     end subroutine find_btw_points_y
 
 #endif 

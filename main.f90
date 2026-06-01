@@ -89,18 +89,39 @@ program main
     print *, "sum coef_u_lap = ", sum(ibm%coef_u_lap)
     print *, "sum coef_v_lap = ", sum(ibm%coef_v_lap)
     print *, "sum coef_w_lap = ", sum(ibm%coef_w_lap)
+
+    print *, "u solid:", count(ibm%coef_u >= 0.5d0*SOLID)
+    print *, "v solid:", count(ibm%coef_v >= 0.5d0*SOLID)
+    print *, "w solid:", count(ibm%coef_w >= 0.5d0*SOLID)
+
+    print *, "u lap min/max:", minval(ibm%coef_u_lap), maxval(ibm%coef_u_lap)
+    print *, "v lap min/max:", minval(ibm%coef_v_lap), maxval(ibm%coef_v_lap)
+    print *, "w lap min/max:", minval(ibm%coef_w_lap), maxval(ibm%coef_w_lap)
+
+    print *, "u lap nonzero:", count(ibm%coef_u_lap > 0.0d0)
+    print *, "v lap nonzero:", count(ibm%coef_v_lap > 0.0d0)
+    print *, "w lap nonzero:", count(ibm%coef_w_lap > 0.0d0)
+
+    print *, "u lap negative:", count(ibm%coef_u_lap < 0.0d0)
+    print *, "v lap negative:", count(ibm%coef_v_lap < 0.0d0)
+    print *, "w lap negative:", count(ibm%coef_w_lap < 0.0d0)
+
+    print *, "maxloc w lap:", maxloc(ibm%coef_w_lap)
+    print *, "max w lap:", maxval(ibm%coef_w_lap)
 #endif
     ! Time loop
     ! ------------------------
     print *, "main loop starting..."
     i = 0
+#ifdef USE_IBM_G
+        call calc_a_b(g,ibm,rk3_c)
+#endif
+! I only calculate the A and B coeff. once since we dont change the dt
+! correct assumption? 
     do while(g%t_current<g%t_final)
         g%t_current = g%t_current + g%dt
         i = i + 1
         ! rk3 steps
-#ifdef USE_IBM_G
-        call calc_a_b(g,ibm,rk3_c)
-#endif
 #if defined(USE_IBM_G) || defined (USE_IBM)
         call rk3_first_st(f,g,rk3_c,ibm,wss)
         call rk3_second_st(f,g,rk3_c,ibm,wss)
@@ -111,14 +132,14 @@ program main
         call rk3_third_st(f,g,rk3_c,wss)
 #endif 
     
-        g%dt = g%dtmax
      
         if (modulo(i,100) == 0)then
             print*,"time step is at: ",i
         end if 
         
     end do 
-    ! and we add a mean flow calculation at the end...
+    ! and we add a mean flow calculation at the end..
+    ! calculation @ richardson.f90
     write(file_name_meanf,'("mf_data.txt")') 
     call save_mean_flow(f,g,file_name_meanf)
     !------------------------------------------------

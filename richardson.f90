@@ -3,6 +3,7 @@ module richardson
     use :: init, only: grid_type,field_type   
     implicit none
     contains
+    ! is this a correct way? or do i need to add additioanlly check for any solid? 
     subroutine calc_mean_flow(f,g)
         implicit none
         type(grid_type)     :: g

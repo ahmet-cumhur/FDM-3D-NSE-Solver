@@ -66,6 +66,14 @@ module rk3_step_func
                         e_u = exp(ksi_u)-1.0d0;e_w = exp(ksi_w)-1.0d0
                         ! get the B first ofc w/ taylor exp. if its too small
                         ! if we let ksi/ksi this causes NaN we need to simplfy
+                        
+
+                        !                   NEW QUESTIONS HERE                  !
+                        ! this is where i calculate the A and B are they correct?
+                        ! I used the way we talked about ---> approx. the e^x -1
+                        ! if its too small ---> use taylor expansion
+                        !-----------------------------------------------------!
+                        ! is this a correct way to go? 
                         if (e_u >1e-5) then
                             rk3_c%B_rk3_u(i,j,k) =  (ksi_u)/(e_u)
                         else
@@ -103,6 +111,8 @@ module rk3_step_func
         end subroutine calc_a_b
 #endif
         ! location changed
+        ! should i add commented out part? 
+        ! what about corrector step? 
         subroutine divU_rk3(f, g,rk3_c,n_loop)
             type(field_type),   intent(inout) :: f
             type(rk3_coeff),    intent(in)    :: rk3_c
@@ -116,7 +126,7 @@ module rk3_step_func
 
                         f%rhs(i,j,k) = ( &
                         (f%us(i+1,j,k)-f%us(i,j,k))/g%dx &
-                        + (f%vs(i,j+1,k)-f%vs(i,j,k))/g%dy &
+                        + (f%vs(i,j+1,k)-f%vs(i,j,k))/g%dy &         ! THIS PART
                         + (f%ws(i,j,k+1)-f%ws(i,j,k))/g%dz ) / (g%dt)!*rk3_c%c(n_loop))
 
                     end do
@@ -158,16 +168,8 @@ module rk3_step_func
             call divU_rk3(f, g,rk3_c,n_loop)
             call poisson(g, f, wss)
             call apply_bc(f,g)
+            ! SHOULD I ADD N_LOOP?? 
             call corrector(f, g)
-#ifdef USE_IBM
-            call apply_ibm(f%un, ibm%coef_u, g)
-            call apply_ibm(f%vn, ibm%coef_v, g)
-            call apply_ibm(f%wn, ibm%coef_w, g)
-#elif USE_IBM_G
-            call apply_ibm(f%un, ibm%coef_u, g)
-            call apply_ibm(f%vn, ibm%coef_v, g)
-            call apply_ibm(f%wn, ibm%coef_w, g)
-#endif
             call apply_bc(f,g)
         end subroutine main_loop
 

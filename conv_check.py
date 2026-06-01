@@ -15,10 +15,10 @@ qx_fine =  float(8.2979463661100616e-1)
 
 p = np.log((qx_mid-qx_coarse)/(qx_fine-qx_mid))/np.log(2.0)
 print(p)
+# 2nd order flat wall  w/ rk3  
+qx_coarse = float( 4.8068146233492687E-01)
+qx_mid = float(4.6808135220443342E-01)
+qx_fine =  float(4.6891703492944486E-01)
 
-qx_coarse = float(6.8505455523739711e-01)
-qx_mid = float(6.8131356525648401e-01)
-qx_fine =  float(6.8135503348837756e-01)
-
-p = np.log((qx_mid-qx_coarse)/(qx_fine-qx_mid))/np.log(2.0)
-print(p)
+p_2nd = np.log((qx_mid-qx_coarse)/(qx_fine-qx_mid))/np.log(2.0)
+print(p_2nd)

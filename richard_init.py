@@ -6,7 +6,7 @@ import shutil
 # spatial 
 # enter the resolutions
 # resolutions must be entered like : ----- coarse to finer -----
-resolutions= np.array([16,32,64])
+resolutions= np.array([8,16,32])
 # change dt:
 dt = 1e-3
 dt_max = 1e-3
@@ -27,11 +27,15 @@ def write_old(init_file_path,old_data):
     f.write(old_data)
     f.close()
     return
-
+###########################################################
+# if this stops in half the init file change              #
+# stays there; therefore save the init.f90 somewhere else #
+###########################################################
 def run_cases(init_file_path:str,resolutions:np.array,dt:float,dt_max:float,t_final:float,old_init_data):
     # make a directory to save the output files
     os.makedirs(str(os.getcwd()+"//richard_out"),exist_ok=True)
     for i in range(np.size(resolutions)):
+        print(f"running the case: {resolutions[i]}")
         os.makedirs(str(os.getcwd()+f"//richard_out//res_{resolutions[i]}"),exist_ok=True)
         #open the file
         init_file = open(init_file_path,"r+")
@@ -39,7 +43,7 @@ def run_cases(init_file_path:str,resolutions:np.array,dt:float,dt_max:float,t_fi
         #edit the variables for IBM_G and IBM
         init_variables = init_variables.replace("g%nx = 50;",(f"g%nx = {resolutions[i]};"))
         init_variables = init_variables.replace("g%ny = 50;",f"g%ny = {resolutions[i]};")
-        init_variables = init_variables.replace("g%nz = 20;",f"g%nz = {resolutions[i]};")
+        init_variables = init_variables.replace("g%nz = 20;",f"g%nz = {resolutions[i]//2};")
         
         init_variables = init_variables.replace(f"g%dt = 1.0d-4",f"g%dt = {dt};")
         init_variables = init_variables.replace(f"g%dt_max = 1.0d-3",f"g%dtmax = {dt_max};")
