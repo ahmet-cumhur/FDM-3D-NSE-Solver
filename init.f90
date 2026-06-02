@@ -74,11 +74,11 @@ subroutine init_grid(g)
     g%re = 100.0d0
 
 #ifdef USE_IBM
-    g%dt = 1.0d-4
+    g%dt = 1.0d-3
 #elif USE_IBM_G
-    g%dt = 1.0d-4
+    g%dt = 1.0d-3
 #else
-    g%dt = 1.0d-4
+    g%dt = 1.0d-3
 #endif
     g%cflmax = 0.1d0
     g%dtmax = 1.0d-3

@@ -6,7 +6,7 @@ import shutil
 # spatial 
 # enter the resolutions
 # resolutions must be entered like : ----- coarse to finer -----
-resolutions= np.array([8,16,32])
+resolutions= np.array([16,32,64])
 # change dt:
 dt = 1e-3
 dt_max = 1e-3
@@ -63,9 +63,9 @@ def run_cases(init_file_path:str,resolutions:np.array,dt:float,dt_max:float,t_fi
         subprocess.run(["./build_ibm2nd/main"])
         shutil.move("mf_data.txt",str(os.getcwd())+f"//richard_out//res_{resolutions[i]}//mean_flow_2nd.txt")
         # now run the IBM case
-        print("running the Staircase IBM case...")
-        subprocess.run(["./build_ibm/main"])
-        shutil.move("mf_data.txt",str(os.getcwd())+f"//richard_out//res_{resolutions[i]}//mean_flow_stair.txt")
+        #print("running the Staircase IBM case...")
+        #subprocess.run(["./build_ibm/main"])
+        #shutil.move("mf_data.txt",str(os.getcwd())+f"//richard_out//res_{resolutions[i]}//mean_flow_stair.txt")
         #reset init.f90
         clean_init(init_file_path,old_init_data)
         

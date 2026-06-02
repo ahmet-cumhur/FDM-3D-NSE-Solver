@@ -81,11 +81,10 @@ end subroutine init_ibm
         real(C_DOUBLE), parameter :: pi = 3.141592653589793d0
         real(C_DOUBLE) :: y_body
         real(C_DOUBLE) :: y0
-        y0 = 0.25d0
-        y_body = y0+ibm%amp_x * 0.5d0 * &
-                 (1.0d0 + sin(2.0d0*pi*real(ibm%n_wave_x,C_DOUBLE)*x/g%lx + ibm%phase_x))  + &
-                 ibm%amp_z * 0.5d0 * &
-                (1.0d0 + sin(2.0d0*pi*real(ibm%n_wave_z,C_DOUBLE)*z/g%lz + ibm%phase_z))
+        y0 = 0.04d0
+        y_body = y0 &
+        +ibm%amp_x * 0.5d0 * (1.0d0 + sin(2.0d0*pi*real(ibm%n_wave_x,C_DOUBLE)*x/g%lx + ibm%phase_x))&  
+        +ibm%amp_z * 0.5d0 * (1.0d0 + sin(2.0d0*pi*real(ibm%n_wave_z,C_DOUBLE)*z/g%lz + ibm%phase_z))
 
         isInBody = (y < y_body)
 
@@ -169,53 +168,28 @@ end subroutine init_ibm
                         ! first we go for x dir
                     if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x_ip,y,z,ibm,g)) then
                         call find_btw_points_x(x,x_ip,y,z,ibm,g,coeff,ix,iy,iz,i0,j0,k0)
-                        ! I added these checks if the point we are are at is solid then we skip directly
-                        if (coeff(ix,iy,iz) == SOLID)then
-                            coef_lap(ix,iy,iz) = 0.0d0
-                            cycle
-                        end if 
                         coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
                     end if
                     if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x_im,y,z,ibm,g)) then 
                         call find_btw_points_x(x,x_im,y,z,ibm,g,coeff,ix,iy,iz,i0,j0,k0)
-                        if (coeff(ix,iy,iz) == SOLID)then
-                            coef_lap(ix,iy,iz) = 0.0d0
-                            cycle
-                        end if
                         coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
                     end if
                         ! z dir    
                     if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x,y,z_kp,ibm,g)) then
                         call find_btw_points_z(z,z_kp,y,x,ibm,g,coeff,ix,iy,iz,i0,j0,k0)
-                        if (coeff(ix,iy,iz) == SOLID)then
-                            coef_lap(ix,iy,iz) = 0.0d0
-                            cycle
-                        end if
                         coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
                     end if
                     if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x,y,z_km,ibm,g)) then 
                         call find_btw_points_z(z,z_km,y,x,ibm,g,coeff,ix,iy,iz,i0,j0,k0)
-                        if (coeff(ix,iy,iz) == SOLID)then
-                            coef_lap(ix,iy,iz) = 0.0d0
-                            cycle
-                        end if
                         coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
                     end if
                         ! y dir
                     if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x,y_jp,z,ibm,g)) then
                         call find_btw_points_y(y,y_jp,x,z,ibm,g,coeff,ix,iy,iz,i0,j0,k0)
-                        if (coeff(ix,iy,iz) == SOLID)then
-                            coef_lap(ix,iy,iz) = 0.0d0
-                            cycle
-                        end if
                         coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
                     end if
                     if (.not. isInBody(x,y,z,ibm,g) .and. isInBody(x,y_jm,z,ibm,g)) then 
                         call find_btw_points_y(y,y_jm,x,z,ibm,g,coeff,ix,iy,iz,i0,j0,k0)
-                        if (coeff(ix,iy,iz) == SOLID)then
-                            coef_lap(ix,iy,iz) = 0.0d0
-                            cycle
-                        end if
                         coef_lap(ix,iy,iz) =  coef_lap(ix,iy,iz) + ibm%lambda
                     end if
 
@@ -273,11 +247,10 @@ end subroutine init_ibm
         ! otherwise either i have too big lambda or infinite lambda
         eps = 1.0d-10*g%dx
         if (x_diff<eps)then
-            ibm%lambda= 0.0d0
-            coeff(ix,iy,iz) = SOLID
-        else
-        ibm%lambda= real((1.0d0 / g%dx**2)*((g%dx/x_diff)-1.0d0),kind=C_DOUBLE)
+            x_diff = eps
         end if 
+        ibm%lambda= real((1.0d0 / g%dx**2)*((g%dx/x_diff)-1.0d0),kind=C_DOUBLE)
+        
         ! we also need to add the 1/dx**2 to the lambda
     end subroutine find_btw_points_x
 
@@ -315,11 +288,9 @@ end subroutine init_ibm
         end if
         eps = 1.0d-10*g%dz
         if (z_diff<eps)then
-            ibm%lambda= 0.0d0
-            coeff(ix,iy,iz) = SOLID 
-        else
-        ibm%lambda= real((1.0d0 / g%dz**2)*((g%dz/z_diff)-1.0d0),kind=C_DOUBLE)
+            z_diff = eps
         end if
+        ibm%lambda= real((1.0d0 / g%dz**2)*((g%dz/z_diff)-1.0d0),kind=C_DOUBLE)
     end subroutine find_btw_points_z
 
     ! same as x just names changed
@@ -355,27 +326,25 @@ end subroutine init_ibm
         end if
         eps = 1.0d-10*g%dy
         if (y_diff<eps)then
-            ibm%lambda= 0.0d0
-            coeff(ix,iy,iz) = SOLID
-        else 
-        ibm%lambda= real((1.0d0 / g%dy**2)*((g%dy/y_diff)-1.0d0),kind=C_DOUBLE)
+            y_diff = eps
         end if
+        ibm%lambda= real((1.0d0 / g%dy**2)*((g%dy/y_diff)-1.0d0),kind=C_DOUBLE)
     end subroutine find_btw_points_y
 
 #endif 
 
-    subroutine apply_ibm(field, coeff, g)
+    subroutine apply_ibm(field, coeff, g,i0,j0,k0)
         implicit none
-
-        real(C_DOUBLE), intent(inout)   :: field(:,:,:)
-        real(C_DOUBLE), intent(in)      :: coeff(:,:,:)
+        integer,intent(in)              ::i0,j0,k0
+        real(C_DOUBLE), intent(inout)   :: field(i0:,j0:,k0:)
+        real(C_DOUBLE), intent(in)      :: coeff(i0:,j0:,k0:)
         type(grid_type), intent(in)     :: g
 
         integer :: ix, iy, iz
 
-        do iz = 1, size(field,3)
-       	    do iy = 1, size(field,2)
-	            do ix = 1, size(field,1)
+        do iz = lbound(field,3), ubound(field,3)
+       	    do iy = lbound(field,2), ubound(field,2)
+	            do ix = lbound(field,1), ubound(field,1)
 
                     field(ix,iy,iz) = field(ix,iy,iz) / &
                                     (1.0d0 + g%dt*coeff(ix,iy,iz))

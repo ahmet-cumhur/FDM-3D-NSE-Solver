@@ -29,12 +29,14 @@ program main
 #endif
     ! rk3 is here
 #ifdef USE_IBM_G
-    use :: rk3_step_func, only: rk3_coeff, init_rk3_arrays, calc_a_b,rk3_first_st, rk3_second_st, rk3_third_st,divU_rk3
+    use :: rk3_step_func, only: rk3_coeff, init_rk3_arrays, calc_a_b,rk3_first_st, rk3_second_st, rk3_third_st
 #else
-    use :: rk3_step_func, only: rk3_coeff,rk3_first_st, rk3_second_st, rk3_third_st,divU_rk3
+    use :: rk3_step_func, only: rk3_coeff,rk3_first_st, rk3_second_st, rk3_third_st
 #endif
     use :: richardson,    only: calc_mean_flow,save_mean_flow
-
+#if defined(USE_IBM_G) && defined(USE_IBM)
+#error "Both Macros are on!"
+#endif
     ! Define variables
     ! ------------------------
     integer(C_INT)               :: i        ! Index for the time loop 
@@ -113,11 +115,6 @@ program main
     ! ------------------------
     print *, "main loop starting..."
     i = 0
-#ifdef USE_IBM_G
-        call calc_a_b(g,ibm,rk3_c)
-#endif
-! I only calculate the A and B coeff. once since we dont change the dt
-! correct assumption? 
     do while(g%t_current<g%t_final)
         g%t_current = g%t_current + g%dt
         i = i + 1
@@ -135,13 +132,21 @@ program main
      
         if (modulo(i,100) == 0)then
             print*,"time step is at: ",i
+            write(file_name,'("data_",I0,".vtk")') i
+            print*, "current time step: ", i, "   filename: ", file_name, "   cfl:", g%cfl*g%dt
+            call center_vel(f,g)
+            call data_output(f,g,file_name)
         end if 
         
     end do 
     ! and we add a mean flow calculation at the end..
     ! calculation @ richardson.f90
     write(file_name_meanf,'("mf_data.txt")') 
+#if defined(USE_IBM_G) || defined (USE_IBM)
+    call save_mean_flow(f,g,file_name_meanf,ibm)
+#else
     call save_mean_flow(f,g,file_name_meanf)
+#endif
     !------------------------------------------------
     print *, "main loop ended..."
     call destroy_poisson_fft_workspace(wss)

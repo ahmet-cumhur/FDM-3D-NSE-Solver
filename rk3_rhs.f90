@@ -6,7 +6,9 @@ module get_rhs
 
     contains
     subroutine mom_rhs_compute(rhs_u,rhs_v,rhs_w,f,g)
-
+        ! very important note:
+        ! in rhs calculation there shouldnt be any pressure gradient.
+        ! pressure effects must be added at intermediate velocity calculation
         type(grid_type)              :: g       
         type(field_type)             :: f
         real(C_DOUBLE)               :: rhs_u(0:g%nx+1,0:g%ny+1,0:g%nz+1)
@@ -51,13 +53,13 @@ module get_rhs
                     diff_uy = (f%un(i,jm,k)-2.0d0*f%un(i,j,k)+f%un(i,jp,k))/g%dy**2
                     diff_uz = (f%un(i,j,km)-2.0d0*f%un(i,j,k)+f%un(i,j,kp))/g%dz**2
 
-                    dpx = (f%pn(i,j,k)-f%pn(im,j,k))/g%dx 
+                    !dpx = (f%pn(i,j,k)-f%pn(im,j,k))/g%dx 
 
                     rhs_u(i,j,k) = &
                         -(uu_p-uu_m)/g%dx &
                         -(uv_p-uv_m)/g%dy &
                         -(uw_p-uw_m)/g%dz &
-                        - dpx &
+                        !- dpx &
                         + (1.0d0/g%re)*(diff_ux + diff_uy + diff_uz) &
                         + f%b_x
                 end do
@@ -89,13 +91,13 @@ module get_rhs
                     diff_vy = (f%vn(i,jm,k)-2.0d0*f%vn(i,j,k)+f%vn(i,jp,k))/g%dy**2
                     diff_vz = (f%vn(i,j,km)-2.0d0*f%vn(i,j,k)+f%vn(i,j,kp))/g%dz**2
 
-                    dpy = (f%pn(i,j,k)-f%pn(i,jm,k))/g%dy
+                    !dpy = (f%pn(i,j,k)-f%pn(i,jm,k))/g%dy
 
                     rhs_v(i,j,k) = &
                         -(vu_p-vu_m)/g%dx &
                         -(vv_p-vv_m)/g%dy &
                         -(vw_p-vw_m)/g%dz &
-                        - dpy &
+                        !- dpy &
                         + (1.0d0/g%re)*(diff_vx + diff_vy + diff_vz) & 
                         + f%b_y
                 end do
@@ -127,13 +129,13 @@ module get_rhs
                     diff_wy = (f%wn(i,jm,k)-2.0d0*f%wn(i,j,k)+f%wn(i,jp,k))/g%dy**2
                     diff_wz = (f%wn(i,j,km)-2.0d0*f%wn(i,j,k)+f%wn(i,j,kp))/g%dz**2
 
-                    dpz = (f%pn(i,j,k)-f%pn(i,j,km))/g%dz
+                    !dpz = (f%pn(i,j,k)-f%pn(i,j,km))/g%dz
 
                     rhs_w(i,j,k) = &
                         -(wu_p-wu_m)/g%dx &
                         -(wv_p-wv_m)/g%dy &
                         -(ww_p-ww_m)/g%dz &
-                        - dpz &
+                        !- dpz &
                         + (1.0d0/g%re)*(diff_wx + diff_wy + diff_wz) &
                         + f%b_z 
 
