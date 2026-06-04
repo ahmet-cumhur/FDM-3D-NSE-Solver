@@ -20,6 +20,5 @@ print(p)
 qx_coarse = float(6.6706369219803840E-01)
 qx_mid = float(6.6255389205636306E-01)
 qx_fine =  float(6.6133739285345006E-01)
-
 p_2nd = np.log((qx_mid-qx_coarse)/(qx_fine-qx_mid))/np.log(2.0)
 print(p_2nd)

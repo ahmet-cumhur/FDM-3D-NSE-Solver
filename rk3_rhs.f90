@@ -29,10 +29,18 @@ module get_rhs
         rhs_u = 0.0d0
         rhs_v = 0.0d0
         rhs_w = 0.0d0
-        do i = 1, g%nx
-            do j = 1, g%ny
-                do k = 1, g%nz
 
+        !$omp parallel default(none)&   
+        !$omp& private(i,j,k,ip,im,kp,km,jp,jm,diff_ux,diff_uy,diff_uz,diff_vx,diff_vy,diff_vz,&
+        !$omp&                diff_wx,diff_wy,diff_wz,uu_p,uu_m,uv_p,uv_m,uw_p,uw_m,&
+        !$omp&                vu_p,vu_m,vv_p,vv_m,vw_p,vw_m,wu_p,wu_m,ww_p,ww_m,wv_p,wv_m)&
+        !$omp& shared(f,g,rhs_u,rhs_v,rhs_w)
+        
+        !$omp do collapse(2) schedule(static)               
+        do k = 1, g%nz
+            do j = 1, g%ny
+                do i = 1, g%nx                                                                                                                  
+                    
                     ip = i+1
                     im = i-1
                     jp = j+1
@@ -65,11 +73,13 @@ module get_rhs
                 end do
             end do
         end do
+        !$omp end do
 
+        !$omp do collapse(2) schedule(static)  
         ! y-momentum
-        do i = 1, g%nx
+        do k = 1, g%nz
             do j = 2, g%ny
-                do k = 1, g%nz
+                do i = 1, g%nx
 
                     ip = i+1
                     im = i-1
@@ -103,11 +113,12 @@ module get_rhs
                 end do
             end do
         end do
-
+        !$omp end do 
+        !$omp do collapse(2) schedule(static)  
         ! z-momentum
-        do i = 1, g%nx
+        do k = 1, g%nz
             do j = 1, g%ny
-                do k = 1, g%nz
+                do i = 1, g%nx
 
                     ip = i+1
                     im = i-1
@@ -142,8 +153,8 @@ module get_rhs
                 end do
             end do
         end do
-
-
+        !$omp end do
+        !$omp end parallel
     end subroutine mom_rhs_compute
 
 end module get_rhs

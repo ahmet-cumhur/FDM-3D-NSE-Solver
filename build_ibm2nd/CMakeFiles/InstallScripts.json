@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/cumhur/codes/nse/FDM-3D-NSE-Solver/build_ibm2nd/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -8,7 +8,7 @@ import shutil
 # resolutions must be entered like : ----- coarse to finer -----
 resolutions= np.array([16,32,64])
 # change dt:
-dt = 1e-3
+dt = 5e-4
 dt_max = 1e-3
 t_final = 1.e0 
 q_x = np.zeros((np.size(resolutions),2))
@@ -43,7 +43,7 @@ def run_cases(init_file_path:str,resolutions:np.array,dt:float,dt_max:float,t_fi
         #edit the variables for IBM_G and IBM
         init_variables = init_variables.replace("g%nx = 50;",(f"g%nx = {resolutions[i]};"))
         init_variables = init_variables.replace("g%ny = 50;",f"g%ny = {resolutions[i]};")
-        init_variables = init_variables.replace("g%nz = 20;",f"g%nz = {resolutions[i]//2};")
+        init_variables = init_variables.replace("g%nz = 20;",f"g%nz = {resolutions[i]};")
         
         init_variables = init_variables.replace(f"g%dt = 1.0d-4",f"g%dt = {dt};")
         init_variables = init_variables.replace(f"g%dt_max = 1.0d-3",f"g%dtmax = {dt_max};")
@@ -63,9 +63,9 @@ def run_cases(init_file_path:str,resolutions:np.array,dt:float,dt_max:float,t_fi
         subprocess.run(["./build_ibm2nd/main"])
         shutil.move("mf_data.txt",str(os.getcwd())+f"//richard_out//res_{resolutions[i]}//mean_flow_2nd.txt")
         # now run the IBM case
-        #print("running the Staircase IBM case...")
-        #subprocess.run(["./build_ibm/main"])
-        #shutil.move("mf_data.txt",str(os.getcwd())+f"//richard_out//res_{resolutions[i]}//mean_flow_stair.txt")
+        print("running the Staircase IBM case...")
+        subprocess.run(["./build_ibm/main"])
+        shutil.move("mf_data.txt",str(os.getcwd())+f"//richard_out//res_{resolutions[i]}//mean_flow_stair.txt")
         #reset init.f90
         clean_init(init_file_path,old_init_data)
         

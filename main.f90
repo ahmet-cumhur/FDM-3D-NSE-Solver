@@ -50,8 +50,12 @@ program main
 #elif USE_IBM_G 
     type(ibm_type)       :: ibm
 #endif   
+#ifdef USE_OPENMP
+    use :: omp_lib
+#endif
     character(len=256)           :: file_name
     character(len=256)           :: file_name_meanf
+    real(C_DOUBLE)               :: t1,t2,t3,t_diff 
 
     ! Initialisations
     ! ------------------------
@@ -83,39 +87,24 @@ program main
     call set_ibm_coeff_2nd(g, ibm, ibm%coef_u, 1, 0, 0,ibm%coef_u_lap,0,0,0)
     call set_ibm_coeff_2nd(g, ibm, ibm%coef_v, 0, 1, 0,ibm%coef_v_lap,0,1,0)
     call set_ibm_coeff_2nd(g, ibm, ibm%coef_w, 0, 0, 1,ibm%coef_w_lap,0,0,0)
-
-    print *, "max coef_u_lap = ", maxval(ibm%coef_u_lap)
-    print *, "max coef_v_lap = ", maxval(ibm%coef_v_lap)
-    print *, "max coef_w_lap = ", maxval(ibm%coef_w_lap)
-
-    print *, "sum coef_u_lap = ", sum(ibm%coef_u_lap)
-    print *, "sum coef_v_lap = ", sum(ibm%coef_v_lap)
-    print *, "sum coef_w_lap = ", sum(ibm%coef_w_lap)
-
-    print *, "u solid:", count(ibm%coef_u >= 0.5d0*SOLID)
-    print *, "v solid:", count(ibm%coef_v >= 0.5d0*SOLID)
-    print *, "w solid:", count(ibm%coef_w >= 0.5d0*SOLID)
-
-    print *, "u lap min/max:", minval(ibm%coef_u_lap), maxval(ibm%coef_u_lap)
-    print *, "v lap min/max:", minval(ibm%coef_v_lap), maxval(ibm%coef_v_lap)
-    print *, "w lap min/max:", minval(ibm%coef_w_lap), maxval(ibm%coef_w_lap)
-
-    print *, "u lap nonzero:", count(ibm%coef_u_lap > 0.0d0)
-    print *, "v lap nonzero:", count(ibm%coef_v_lap > 0.0d0)
-    print *, "w lap nonzero:", count(ibm%coef_w_lap > 0.0d0)
-
-    print *, "u lap negative:", count(ibm%coef_u_lap < 0.0d0)
-    print *, "v lap negative:", count(ibm%coef_v_lap < 0.0d0)
-    print *, "w lap negative:", count(ibm%coef_w_lap < 0.0d0)
-
-    print *, "maxloc w lap:", maxloc(ibm%coef_w_lap)
-    print *, "max w lap:", maxval(ibm%coef_w_lap)
 #endif
     ! Time loop
     ! ------------------------
+#ifdef USE_OPENMP
+call cpu_time(t3)
+#else
+t3 = omp_get_wtime()
+#endif
     print *, "main loop starting..."
     i = 0
     do while(g%t_current<g%t_final)
+        if(modulo(i,1000)==0)then
+#ifdef USE_OPENMP
+            t1 = omp_get_wtime()
+#else
+            call cpu_time(t1)
+#endif
+        endif
         g%t_current = g%t_current + g%dt
         i = i + 1
         ! rk3 steps
@@ -136,11 +125,19 @@ program main
             print*, "current time step: ", i, "   filename: ", file_name, "   cfl:", g%cfl*g%dt
             call center_vel(f,g)
             call data_output(f,g,file_name)
-        end if 
-        
+        end if   
     end do 
     ! and we add a mean flow calculation at the end..
     ! calculation @ richardson.f90
+#ifdef USE_OPENMP
+    call cpu_time(t2)
+#else
+    t2 = omp_get_wtime()
+#endif
+    t_diff = t2-t1
+    print*,"time spent pro step: ",t_diff
+    t_diff = t2-t3
+    print*,"time spent for main loop: ",t_diff
     write(file_name_meanf,'("mf_data.txt")') 
 #if defined(USE_IBM_G) || defined (USE_IBM)
     call save_mean_flow(f,g,file_name_meanf,ibm)

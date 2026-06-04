@@ -7,6 +7,7 @@ project(3D_NSE_SOLVER LANGUAGES Fortran)
 # =========================
 option(USE_IBM "Enable immersed boundary method (IBM)" OFF)
 option(USE_IBM_G "Enable second-order immersed boundary method" OFF)
+option(USE_OPENMP "Enable OpenMP parallelization" ON)
 # =========================
 # Sources
 # =========================
@@ -31,7 +32,15 @@ if(USE_IBM OR USE_IBM_G)
 endif()
 
 add_executable(main ${SOURCES})
+# =========================
+# OPENMP
+# =========================
+if(USE_OPENMP)
+    find_package(OpenMP REQUIRED)
 
+    target_link_libraries(main PRIVATE OpenMP::OpenMP_Fortran)
+    target_compile_definitions(main PRIVATE USE_OPENMP)
+endif()
 # =========================
 # Module directory
 # =========================
