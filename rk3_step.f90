@@ -57,6 +57,7 @@ module rk3_step_func
             real(C_DOUBLE) :: dt_loop
             integer        :: n_loop 
             dt_loop = rk3_c%c(n_loop)*g%dt
+            !$omp do collapse(2) schedule(static) private(i,j,k)
             do k = 1,g%nz
                 do j = 1,g%ny
                     do i = 1,g%nx
@@ -84,7 +85,9 @@ module rk3_step_func
                         rk3_c%A_rk3_w(i,j,k) = ksi_w+rk3_c%B_rk3_w(i,j,k) 
                     end do 
                 end do
-            end do            
+            end do
+            !$omp end do       
+            !$omp do collapse(2) schedule(static) private(i,j,k)      
             do k = 1,g%nz
                 do j = 2, g%ny
                     do i = 1,g%nx
@@ -101,7 +104,7 @@ module rk3_step_func
                     end do 
                 end do 
             end do 
-
+            !$omp end do
         end subroutine calc_a_b
 #endif
         ! location changed
@@ -112,17 +115,22 @@ module rk3_step_func
             type(rk3_coeff),    intent(in)    :: rk3_c
             type(grid_type),    intent(in)    :: g
             integer,intent(in)                :: n_loop 
-            integer :: i,j,k
+            integer :: i,j,k,ip,jp,kp
             real(C_DOUBLE)                    :: dt_loop
-            dt_loop = rk3_c%c(n_loop)*g%dt
-            do i = 1, g%nx
+            real(C_DOUBLE)                    :: d_dx,d_dy,d_dz
+            dt_loop = 1.0d0/(rk3_c%c(n_loop)*g%dt)
+            d_dx = 1.0d0/g%dx;d_dy = 1.0d0/g%dy;d_dz = 1.0d0/g%dz;
+            !$omp do collapse(2) schedule(static) private(i,j,k,ip,jp,kp)
+            do k = 1, g%nz
                 do j = 1, g%ny
-                    do k = 1, g%nz
-
+                    do i = 1, g%nx
+                        ip = i+1
+                        jp = j+1 
+                        kp = k+1
                         f%rhs(i,j,k) = ( &
-                        (f%us(i+1,j,k)-f%us(i,j,k))/g%dx &
-                        + (f%vs(i,j+1,k)-f%vs(i,j,k))/g%dy &         ! THIS PART
-                        + (f%ws(i,j,k+1)-f%ws(i,j,k))/g%dz ) / dt_loop
+                        (f%us(ip,j,k)-f%us(i,j,k))  *d_dx &
+                        + (f%vs(i,jp,k)-f%vs(i,j,k))*d_dy &     
+                        + (f%ws(i,j,kp)-f%ws(i,j,k))*d_dz ) * dt_loop
 
                     end do
                 end do
@@ -137,34 +145,47 @@ module rk3_step_func
         integer,intent(in)              :: n_loop
         integer :: i,j,k,im,km
         real(C_DOUBLE) :: dt_loop
+        real(C_DOUBLE)                  :: d_dx,d_dy,d_dz
         dt_loop = rk3_c%c(n_loop)*g%dt
-
-        do i = 1, g%nx
+        d_dx = 1.0d0/g%dx;d_dy = 1.0d0/g%dy;d_dz = 1.0d0/g%dz;
+        !$omp do collapse(2) schedule(static) private(i,j,k)
+        do k = 1, g%nz
             do j = 1, g%ny
-                do k = 1, g%nz
+                do i = 1, g%nx
                     
-                    f%un(i,j,k) = f%us(i,j,k) - dt_loop*(f%pc(i,j,k)-f%pc(i-1,j,k))/g%dx
+                    f%un(i,j,k) = f%us(i,j,k) - dt_loop*(f%pc(i,j,k)-f%pc(i-1,j,k))*d_dx
                 end do
             end do
         end do
-
-        do i = 1, g%nx
+        !$omp end do 
+        !$omp do collapse(2) schedule(static) private(i,j,k)
+        do k = 1, g%nz
             do j = 2, g%ny
-                do k = 1, g%nz
-                    f%vn(i,j,k) = f%vs(i,j,k) - dt_loop*(f%pc(i,j,k)-f%pc(i,j-1,k))/g%dy
+                do i = 1, g%nx
+                    f%vn(i,j,k) = f%vs(i,j,k) - dt_loop*(f%pc(i,j,k)-f%pc(i,j-1,k))*d_dy
                 end do
             end do
         end do
-
-        do i = 1, g%nx
+        !$omp end do
+        !$omp do collapse(2) schedule(static) private(i,j,k)
+        do k = 1, g%nz
             do j = 1, g%ny
-                do k = 1, g%nz
-                    f%wn(i,j,k) = f%ws(i,j,k) - dt_loop*(f%pc(i,j,k)-f%pc(i,j,k-1))/g%dz
+                do i = 1, g%nx
+                    f%wn(i,j,k) = f%ws(i,j,k) - dt_loop*(f%pc(i,j,k)-f%pc(i,j,k-1))*d_dz
                 end do
             end do
         end do
-        !f%pn = f%pn + rk3_c%c(n_loop)*f%pc
-        f%pn = f%pn + f%pc
+        !$omp end do
+        !$omp do collapse(2) schedule(static) private(i,j,k)
+        do k = 1, g%nz
+            do j = 1, g%ny
+                do i = 1, g%nx
+                   f%pn(i,j,k) = f%pn(i,j,k) + f%pc(i,j,k)
+                end do 
+            end do 
+        end do
+        !$omp end do
+        !f%pn = f%pn + f%pc
 
     end subroutine corrector
 
@@ -188,16 +209,17 @@ module rk3_step_func
             type(poisson_fft_workspace) :: wss
             type(rk3_coeff) :: rk3_c
             integer,intent(in) :: n_loop 
-#if defined(USE_IBM_G) || defined(USE_IBM) 
+#if defined(USE_IBM_G) || defined(USE_IBM)
             call apply_ibm(f%us, ibm%coef_u, g,0,0,0)
             call apply_ibm(f%vs, ibm%coef_v, g,0,1,0)
             call apply_ibm(f%ws, ibm%coef_w, g,0,0,0)
-#endif
+#endif  
             call apply_bc(f,g)
             call divU(f, g,rk3_c,n_loop)
+            !$omp single
             call poisson(g, f, wss)
             call apply_bc(f,g)
-            ! SHOULD I ADD N_LOOP?? 
+            !$omp end single
             call corrector(f, g,rk3_c,n_loop)
 
 #if defined(USE_IBM_G) || defined(USE_IBM) 
@@ -205,7 +227,9 @@ module rk3_step_func
             call apply_ibm(f%vn, ibm%coef_v, g,0,1,0)
             call apply_ibm(f%wn, ibm%coef_w, g,0,0,0)
 #endif
+            !$omp single
             call apply_bc(f,g)
+            !$omp end single
         end subroutine main_loop
 
         ! first rk3 substep
@@ -230,16 +254,20 @@ module rk3_step_func
             integer :: i,j,k
             real(C_DOUBLE)                            :: dpx,dpy,dpz
             real(C_DOUBLE)                            :: dt_loop
+            real(C_DOUBLE)                            :: d_dx,d_dy,d_dz
             dt_loop = rk3_c%c(1)*g%dt
+            d_dx = 1.0d0/g%dx;d_dy = 1.0d0/g%dy;d_dz = 1.0d0/g%dz;
+            !$omp parallel default(none) shared(f,g,rk3_c,ibm,dt_loop,d_dx,d_dy,d_dz,wss)
 #if defined(USE_IBM_G)
             call calc_a_b(g,ibm,rk3_c,1)
 #endif
             call mom_rhs_compute(f%mom_rhs_u0,f%mom_rhs_v0,f%mom_rhs_w0,f,g)
+            !$omp do collapse(2) schedule(static) private(i,j,k,dpx,dpz)
             do k = 1, g%nz
                 do j = 1, g%ny
                     do i = 1, g%nx
-                        dpx = (f%pn(i,j,k)-f%pn(i-1,j,k))/g%dx 
-                        dpz = (f%pn(i,j,k)-f%pn(i,j,k-1))/g%dz
+                        dpx = (f%pn(i,j,k)-f%pn(i-1,j,k))*d_dx
+                        dpz = (f%pn(i,j,k)-f%pn(i,j,k-1))*d_dz
 #ifdef USE_IBM_G
                         f%us(i,j,k) = (rk3_c%B_rk3_u(i,j,k) * f%un(i,j,k) + g%dt*rk3_c%a(1)*f%mom_rhs_u0(i,j,k)&
                         -(dt_loop*dpx))/rk3_c%A_rk3_u(i,j,k)
@@ -252,11 +280,13 @@ module rk3_step_func
                     end do 
                 end do 
             end do 
+            !$omp end do nowait
             ! we seperate the v and u,w because of their shape difference
+            !$omp do collapse(2) schedule(static) private(i,j,k,dpy)
             do k = 1,g%nz
                 do  j = 2,g%ny
                     do i = 1, g%nx
-                        dpy = (f%pn(i,j,k)-f%pn(i,j-1,k))/g%dy
+                        dpy = (f%pn(i,j,k)-f%pn(i,j-1,k))*d_dy
 #ifdef USE_IBM_G
                         f%vs(i,j,k) = (rk3_c%B_rk3_v(i,j,k) * f%vn(i,j,k) + g%dt*rk3_c%a(1)*f%mom_rhs_v0(i,j,k)&
                         -(dt_loop*dpy))/rk3_c%A_rk3_v(i,j,k)
@@ -266,7 +296,7 @@ module rk3_step_func
                     end do
                 end do 
             end do 
-            
+            !$omp end do 
             
 
 #ifdef USE_IBM_G
@@ -276,6 +306,7 @@ module rk3_step_func
 #else 
             call main_loop(f,g,wss,rk3_c,1)
 #endif
+            !$omp end parallel
             ! now the us and un we found here are gonna be used in the next rk3 time step
         end subroutine rk3_first_st
         
@@ -301,17 +332,21 @@ module rk3_step_func
             integer :: i,j,k
             real(C_DOUBLE)                            :: dpx,dpy,dpz
             real(C_DOUBLE)                            :: dt_loop
+            real(C_DOUBLE)                            :: d_dx,d_dy,d_dz
             dt_loop = rk3_c%c(2)*g%dt
             ! dont forget to update the mom_rhs_u0,v0,w0 in the main loop after this subroutine call
+            d_dx = 1.0d0/g%dx;d_dy = 1.0d0/g%dy;d_dz = 1.0d0/g%dz;
+            !$omp parallel default(none) shared(f,g,rk3_c,ibm,dt_loop,d_dx,d_dy,d_dz,wss)
 #if defined(USE_IBM_G)
             call calc_a_b(g,ibm,rk3_c,2)
 #endif
             call mom_rhs_compute(f%mom_rhs_u_int,f%mom_rhs_v_int,f%mom_rhs_w_int,f,g)
+            !$omp do collapse(2) schedule(static) private(i,j,k,dpx,dpz)
             do k = 1, g%nz
                 do j = 1, g%ny
                     do i = 1, g%nx
-                        dpx = (f%pn(i,j,k)-f%pn(i-1,j,k))/g%dx 
-                        dpz = (f%pn(i,j,k)-f%pn(i,j,k-1))/g%dz
+                        dpx = (f%pn(i,j,k)-f%pn(i-1,j,k))*d_dx 
+                        dpz = (f%pn(i,j,k)-f%pn(i,j,k-1))*d_dz
 #ifdef USE_IBM_G
                         f%us(i,j,k) = (rk3_c%B_rk3_u(i,j,k) * f%un(i,j,k) +&
                         g%dt*(rk3_c%a(2)*f%mom_rhs_u_int(i,j,k)+rk3_c%b(2)*f%mom_rhs_u0(i,j,k))-(dt_loop*dpx))&
@@ -327,12 +362,14 @@ module rk3_step_func
 #endif    
                     end do 
                 end do 
-            end do 
+            end do
+            !$omp end do nowait 
             ! we  do the same seperation to the v here again
+            !$omp do collapse(2) schedule(static) private(i,j,k,dpy)
             do k = 1,g%nz
                 do j = 2,g%ny
                     do i = 1, g%nx
-                        dpy = (f%pn(i,j,k)-f%pn(i,j-1,k))/g%dy
+                        dpy = (f%pn(i,j,k)-f%pn(i,j-1,k))*d_dy
 #ifdef USE_IBM_G
                         f%vs(i,j,k) = (rk3_c%B_rk3_v(i,j,k) * f%vn(i,j,k) +&
                         g%dt*(rk3_c%a(2)*f%mom_rhs_v_int(i,j,k)+rk3_c%b(2)*f%mom_rhs_v0(i,j,k))-(dt_loop*dpy))&
@@ -344,8 +381,7 @@ module rk3_step_func
                     end do 
                 end do 
             end do 
-
-
+            !$omp end do 
 
 #ifdef USE_IBM_G
             call main_loop(f,g,ibm,wss,rk3_c,2)
@@ -354,6 +390,7 @@ module rk3_step_func
 #else 
             call main_loop(f,g,wss,rk3_c,2)
 #endif
+            !$omp end parallel
         end subroutine rk3_second_st
         ! third rk3 substep
 #ifdef USE_IBM_G
@@ -377,19 +414,23 @@ module rk3_step_func
             integer :: i,j,k
             real(C_DOUBLE)                            :: dpx,dpy,dpz
             real(C_DOUBLE)                            :: dt_loop
+            real(C_DOUBLE)                            :: d_dx,d_dy,d_dz
             dt_loop = rk3_c%c(3)*g%dt
+            d_dx = 1.0d0/g%dx;d_dy = 1.0d0/g%dy;d_dz = 1.0d0/g%dz;
             f%mom_rhs_u0 = f%mom_rhs_u_int
             f%mom_rhs_v0 = f%mom_rhs_v_int
             f%mom_rhs_w0 = f%mom_rhs_w_int
+            !$omp parallel default(none) shared(f,g,rk3_c,ibm,dt_loop,d_dx,d_dy,d_dz,wss)
 #if defined(USE_IBM_G)
             call calc_a_b(g,ibm,rk3_c,3)
 #endif
             call mom_rhs_compute(f%mom_rhs_u_int,f%mom_rhs_v_int,f%mom_rhs_w_int,f,g)
+            !$omp do collapse(2) schedule(static) private(i,j,k,dpx,dpz)
             do k = 1, g%nz
                 do j = 1, g%ny
                     do i = 1, g%nx
-                        dpx = (f%pn(i,j,k)-f%pn(i-1,j,k))/g%dx 
-                        dpz = (f%pn(i,j,k)-f%pn(i,j,k-1))/g%dz
+                        dpx = (f%pn(i,j,k)-f%pn(i-1,j,k))*d_dx 
+                        dpz = (f%pn(i,j,k)-f%pn(i,j,k-1))*d_dz
 #ifdef USE_IBM_G
                         f%us(i,j,k) = (rk3_c%B_rk3_u(i,j,k) * f%un(i,j,k) +&
                         g%dt*(rk3_c%a(3)*f%mom_rhs_u_int(i,j,k)+rk3_c%b(3)*f%mom_rhs_u0(i,j,k))-(dt_loop*dpx))&
@@ -406,10 +447,12 @@ module rk3_step_func
                     end do 
                 end do 
             end do 
+            !$omp end do nowait
+            !$omp do collapse(2) schedule(static) private(i,j,k,dpy)
             do k = 1, g%nz
                 do j = 2, g%ny
                     do i = 1,g%nx
-                        dpy = (f%pn(i,j,k)-f%pn(i,j-1,k))/g%dy
+                        dpy = (f%pn(i,j,k)-f%pn(i,j-1,k))*d_dy
 #ifdef USE_IBM_G
                         f%vs(i,j,k) = (rk3_c%B_rk3_v(i,j,k) * f%vn(i,j,k) +&
                         g%dt*(rk3_c%a(3)*f%mom_rhs_v_int(i,j,k)+rk3_c%b(3)*f%mom_rhs_v0(i,j,k))-(dt_loop*dpy))&
@@ -420,8 +463,8 @@ module rk3_step_func
 #endif
                     end do
                 end do
-            end do 
-
+            end do
+            !$omp end do  
         
 #ifdef USE_IBM_G
             call main_loop(f,g,ibm,wss,rk3_c,3)
@@ -430,6 +473,7 @@ module rk3_step_func
 #else 
             call main_loop(f,g,wss,rk3_c,3)
 #endif
+        !$omp end parallel
         end subroutine rk3_third_st
 
 end module rk3_step_func

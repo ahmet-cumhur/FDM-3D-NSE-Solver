@@ -341,7 +341,7 @@ end subroutine init_ibm
         type(grid_type), intent(in)     :: g
 
         integer :: ix, iy, iz
-
+        !$omp do collapse(2) schedule(static) private(ix,iy,iz)
         do iz = lbound(field,3), ubound(field,3)
        	    do iy = lbound(field,2), ubound(field,2)
 	            do ix = lbound(field,1), ubound(field,1)
@@ -352,6 +352,6 @@ end subroutine init_ibm
 	    end do
 	        end do
                 end do
-
+                !$omp end do
 end subroutine apply_ibm
 end module ibmm

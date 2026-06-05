@@ -1,3 +1,0 @@
-/home/cumhur/codes/nse/FDM-3D-NSE-Solver/build_ibm2nd/CMakeFiles/main.dir
-/home/cumhur/codes/nse/FDM-3D-NSE-Solver/build_ibm2nd/CMakeFiles/edit_cache.dir
-/home/cumhur/codes/nse/FDM-3D-NSE-Solver/build_ibm2nd/CMakeFiles/rebuild_cache.dir

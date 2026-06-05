@@ -37,6 +37,9 @@ program main
 #if defined(USE_IBM_G) && defined(USE_IBM)
 #error "Both Macros are on!"
 #endif
+#ifdef USE_OPENMP
+    use :: omp_lib
+#endif
     ! Define variables
     ! ------------------------
     integer(C_INT)               :: i        ! Index for the time loop 
@@ -50,15 +53,15 @@ program main
 #elif USE_IBM_G 
     type(ibm_type)       :: ibm
 #endif   
-#ifdef USE_OPENMP
-    use :: omp_lib
-#endif
     character(len=256)           :: file_name
     character(len=256)           :: file_name_meanf
     real(C_DOUBLE)               :: t1,t2,t3,t_diff 
 
     ! Initialisations
     ! ------------------------
+#ifdef USE_OPENMP
+    print*,"working on number of threads: " ,omp_get_max_threads()
+#endif 
     print *, "initialising grid..."
     call init_grid(g)
     print *, "initialising fields..."
@@ -91,20 +94,13 @@ program main
     ! Time loop
     ! ------------------------
 #ifdef USE_OPENMP
-call cpu_time(t3)
-#else
 t3 = omp_get_wtime()
+#else
+call cpu_time(t3)
 #endif
     print *, "main loop starting..."
     i = 0
     do while(g%t_current<g%t_final)
-        if(modulo(i,1000)==0)then
-#ifdef USE_OPENMP
-            t1 = omp_get_wtime()
-#else
-            call cpu_time(t1)
-#endif
-        endif
         g%t_current = g%t_current + g%dt
         i = i + 1
         ! rk3 steps
@@ -130,12 +126,10 @@ t3 = omp_get_wtime()
     ! and we add a mean flow calculation at the end..
     ! calculation @ richardson.f90
 #ifdef USE_OPENMP
-    call cpu_time(t2)
-#else
     t2 = omp_get_wtime()
+#else
+    call cpu_time(t2)
 #endif
-    t_diff = t2-t1
-    print*,"time spent pro step: ",t_diff
     t_diff = t2-t3
     print*,"time spent for main loop: ",t_diff
     write(file_name_meanf,'("mf_data.txt")') 

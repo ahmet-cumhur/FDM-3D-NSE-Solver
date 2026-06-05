@@ -58,7 +58,7 @@ subroutine init_grid(g)
 #ifdef USE_IBM  
     g%nx = 50; g%ny = 50; g%nz = 20;
 #elif USE_IBM_G
-    g%nx = 50; g%ny = 50; g%nz = 20;
+    g%nx = 256; g%ny = 256; g%nz = 64;
 #else
     g%nx = 32; g%ny = 32; g%nz = 10
 #endif
@@ -76,7 +76,7 @@ subroutine init_grid(g)
 #ifdef USE_IBM
     g%dt = 1.0d-3
 #elif USE_IBM_G
-    g%dt = 1.0d-3
+    g%dt = 1.0d-4
 #else
     g%dt = 1.0d-3
 #endif
